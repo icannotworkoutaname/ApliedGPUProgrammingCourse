@@ -1,8 +1,37 @@
-# Question 1：复现 CUDA 向量加法结果
+# HW1 - Assignment Group 40
+
+Members: Yuanyu Zhang, Hongen Wang, Xinyang Li
+
+Code and reproduction steps for the three programming questions of HW1.
+Question 1 is a CUDA vector addition, Question 2 is a 2D matrix multiplication, and Question 3 profiles a quantum Fourier transform on the QuEST CUDA backend.
+
+## Repository layout
+
+```
+README.md
+report.docx               report
+vecAdd.cu                 Question 1: CPU and GPU vector addition
+assignment1.ipynb         Question 1: build, run, plots and Nsight Compute profiling, run on Colab
+Q2/                       **TODO**
+Q3/
+    qft_bench_naive.c     benchmark provided by the course, unmodified
+    hw1_q3_colab.ipynb    every command used for Question 3, run on Colab
+```
+
+## Environment
+
+Question 3 was run on Google Colab: Tesla T4 (compute capability 7.5), Ubuntu 24.04, NVIDIA driver 580.82.07.
+
+**TODO:** CUDA toolkit version (`nvcc --version`) and Nsight Systems version (`nsys --version`) for Question 3, from the Environment cell of the notebook.
+**TODO:** environment used for Question 2.
+
+---
+
+## Question 1：复现 CUDA 向量加法结果
 
 本项目在 Google Colab GPU 运行时中执行，调用方式与课程教程一致。
 
-## 1. 准备文件和环境
+### 1. 准备文件和环境
 
 需要两个文件：
 
@@ -18,7 +47,7 @@
 
 下面带 `!`、`%` 的命令都放在 **Colab 代码单元格**中运行。
 
-## 2. 检查环境并编译
+### 2. 检查环境并编译
 
 ```python
 !nvidia-smi
@@ -33,7 +62,7 @@
 
 `sm_75` 对应 T4。修改源码后，需要重新上传并编译。
 
-## 3. 运行两个指定长度
+### 3. 运行两个指定长度
 
 ```python
 !./vecAdd 512
@@ -64,7 +93,7 @@ N,threads,blocks,H2D_ms,kernel_ms,D2H_ms,max_error
 
 重新运行后，检查自己的输出是否符合上述配置，并查看 `max_error`。
 
-## 4. 复现计时表和堆叠柱状图
+### 4. 复现计时表和堆叠柱状图
 
 继续运行 notebook 中的“导入绘图库”“测量不同长度”“堆叠柱状图”和“查看 CPU/GPU 误差”单元格。
 
@@ -77,7 +106,7 @@ N,threads,blocks,H2D_ms,kernel_ms,D2H_ms,max_error
 
 当前实现每个长度只测量一次，不预热、不重复取平均。CPU 参考计算、内存分配和结果校验不计入三段时间；计时边界会等待 GPU 完成。重新运行时耗时会波动，不要求与 notebook 已保存的数值完全一致。
 
-## 5. 复现 Achieved Occupancy
+### 5. 复现 Achieved Occupancy
 
 先检查 Nsight Compute 的分析模块：
 
@@ -106,10 +135,78 @@ N,threads,blocks,H2D_ms,kernel_ms,D2H_ms,max_error
 
 这些数值是已保存运行的参考值，重新采集可能变化。绘图使用第 4 步的普通运行时间，不能使用 `ncu` 输出中的程序计时，因为 profiler 会增加开销。
 
-## 6. 保存结果与常见问题
+### 6. 保存结果与常见问题
 
 运行完成后，手动下载 `timing_results.csv`、`timing_breakdown.png`，并保存带最新输出的 notebook。Colab 运行时重置后需要重新上传源码、编译和运行。
 
 - 找不到 `vecAdd.cu`：确认文件已上传到 `/content`，且名称一致。
 - 找不到 `ncu`：当前运行时需要先配置 Nsight Compute。
 - 出现 `ERR_NVGPUCTRPERM`：当前运行时不允许访问性能计数器，需要换到允许该功能的 GPU 环境采集占用率；普通计时和校验仍可单独运行。
+
+---
+
+## Question 2 - 2D Dense Matrix Multiplication
+
+### Source files
+
+### Build
+
+### Run
+
+### Reproducing the answers
+
+---
+
+## Question 3 - Quantum Fourier Transform (QuEST CUDA backend)
+
+### Source files
+
+- `Q3/qft_bench_naive.c` is the benchmark from the course page. It was not edited.
+- `Q3/hw1_q3_colab.ipynb` holds all commands used for this question: environment check, build, the 24-qubit run, the 28-qubit memory measurement, the Nsight Systems profiles and the result extraction.
+
+QuEST itself is not part of the submission. It is cloned from GitHub in the build step.
+
+### Setup and build
+
+A GPU runtime is needed. From a QuEST checkout with `qft_bench_naive.c` copied into its root:
+
+```bash
+git clone https://github.com/QuEST-Kit/QuEST.git
+cd QuEST
+cp /path/to/qft_bench_naive.c .
+
+# compute capability: 75 on a T4
+cmake -B build -DQUEST_ENABLE_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=75 \
+      -DCMAKE_CUDA_FLAGS="-lineinfo" \
+      -DUSER_SOURCE_NAMES=qft_bench_naive.c -DUSER_OUTPUT_EXE_NAME=qft_naive
+cmake --build build -j4
+```
+
+The compute capability can be read with `nvidia-smi --query-gpu=name,compute_cap --format=csv`. The notebook does this automatically.
+
+### Run
+
+```bash
+./build/qft_naive 24 5          # 24 qubits, 5 timed repetitions
+./build/qft_naive 28 5          # 28 qubits
+
+# Nsight Systems timeline and statistics (repeat for 16, 24 and 28 qubits)
+nsys profile --trace=cuda,osrt --stats=true -o qft_24q ./build/qft_naive 24 5
+```
+
+The memory measurement for 28 qubits uses `/usr/bin/time -v`, which is not installed on Colab. Install it first with `apt-get install -y time`.
+
+### Reproducing the answers
+
+The simplest way is the notebook: open `Q3/hw1_q3_colab.ipynb` in Colab, select a T4 runtime and run the cells in order. The benchmark file is uploaded when the "Benchmark source" cell asks for it. The last cells pack all outputs into `hw1_q3_results.zip`.
+
+| Question | Notebook section | Output |
+|---|---|---|
+| 3.1 24-qubit run | Q1: 24-qubit run | `run_24q.txt` |
+| 3.2 memory at 28 qubits | Q2: Memory usage, 28 qubits | `run_28q.txt`, `time_28q.txt`, `mem_samples_28q.csv` |
+| 3.3 top three kernels | Q3: Kernel summary | `nsys_24q_stats.txt`, `qft_24q.nsys-rep` |
+| 3.4 kernel to gate mapping | read from the QuEST sources (`quest/src/gpu/gpu_kernels.cuh`, `quest/src/api/operations.cpp`) | - |
+| 3.5 CUDA API calls | open `qft_24q.nsys-rep` in the Nsight Systems GUI | - |
+| 3.6 16 and 28 qubits | Q6: Benchmark timing and kernel summaries | `nsys_16q_stats.txt`, `nsys_28q_stats.txt`, `qft_16q.nsys-rep`, `qft_28q.nsys-rep` |
+
+The `.nsys-rep` files are opened with the Nsight Systems GUI on a local machine.
