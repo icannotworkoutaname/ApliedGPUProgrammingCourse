@@ -37,27 +37,27 @@ The submitted plots and occupancy values are the saved runs described in the rep
 
 ---
 
-## Question 1：复现 CUDA 向量加法结果
+## Question 1: Reproducing CUDA Vector Addition Results
 
-本项目在 Google Colab GPU 运行时中执行，调用方式与课程教程一致。
+This project runs in a Google Colab GPU runtime and uses the same execution workflow as the course tutorial.
 
-### 1. 准备文件和环境
+### 1. Prepare the files and environment
 
-需要两个文件：
+Two files are needed:
 
-- [assignment1.ipynb](Q1/assignment1.ipynb)：编译、运行、绘图和 Nsight 分析。
-- [vecAdd.cu](Q1/vecAdd.cu)：CPU/GPU 向量加法源码。
+- [assignment1.ipynb](Q1/assignment1.ipynb): compilation, execution, plotting, and Nsight profiling.
+- [vecAdd.cu](Q1/vecAdd.cu): CPU/GPU vector addition source code.
 
-当前 notebook 保存的运行环境为 **Tesla T4、CUDA Toolkit 13.0.88**；源码每个 block 使用 **32 个线程**。
+The runtime environment recorded in the current notebook is **Tesla T4 and CUDA Toolkit 13.0.88**; the source code uses **32 threads per block**.
 
-1. 在 Colab 打开 `assignment1.ipynb`。
-2. 将运行时类型设为 GPU，选择 T4（如果可选）。
-3. 手动把本目录中的 `vecAdd.cu` 上传到 Colab 的 `/content`。
-4. 从头依次运行 notebook 单元格，重新生成结果。
+1. Open `assignment1.ipynb` in Colab.
+2. Set the runtime type to GPU and select T4 (if available).
+3. Manually upload `vecAdd.cu` from this directory to `/content` in Colab.
+4. Run the notebook cells in order from the beginning to regenerate the results.
 
-下面带 `!`、`%` 的命令都放在 **Colab 代码单元格**中运行。
+Run the commands below that contain `!` or `%` in **Colab code cells**.
 
-### 2. 检查环境并编译
+### 2. Check the environment and compile
 
 ```python
 !nvidia-smi
@@ -70,61 +70,61 @@ The submitted plots and occupancy values are the saved runs described in the rep
 !nvcc -arch=sm_75 vecAdd.cu -o vecAdd
 ```
 
-`sm_75` 对应 T4。修改源码后，需要重新上传并编译。
+`sm_75` corresponds to T4. After modifying the source code, upload it again and recompile.
 
-### 3. 运行两个指定长度
+### 3. Run the two specified lengths
 
 ```python
 !./vecAdd 512
 !./vecAdd 263149
 ```
 
-程序只接收向量长度 `N`；不传参数时默认 `N=512`。每次运行只启动一次 kernel。
+The program takes only the vector length `N`; if no argument is provided, it defaults to `N=512`. Each run launches the kernel once.
 
-输出列为：
+The output columns are:
 
 ```text
 N,threads,blocks,H2D_ms,kernel_ms,D2H_ms,max_error
 ```
 
-- `threads`：每个 block 的线程数。
-- `blocks`：启动的 block 数；总线程数为 `threads × blocks`。
-- `H2D_ms`：两个输入向量从 CPU 复制到 GPU 的时间。
-- `kernel_ms`：CPU 观察到的 kernel 启动、执行和同步时间。
-- `D2H_ms`：输出向量从 GPU 复制回 CPU 的时间。
-- `max_error`：所有元素的 CPU/GPU 最大绝对误差；为 0 表示数值完全相等。
+- `threads`: the number of threads per block.
+- `blocks`: the number of blocks launched; the total number of threads is `threads × blocks`.
+- `H2D_ms`: the time to copy the two input vectors from the CPU to the GPU.
+- `kernel_ms`: the kernel launch, execution, and synchronization time observed by the CPU.
+- `D2H_ms`: the time to copy the output vector from the GPU back to the CPU.
+- `max_error`: the maximum absolute CPU/GPU error across all elements; 0 means that the results are numerically identical.
 
-当前 notebook 保存的两个测试结果均为 `max_error=0`：
+Both test results saved in the current notebook have `max_error=0`:
 
 | N | threads | blocks |
 | ---: | ---: | ---: |
 | 512 | 32 | 16 |
 | 263149 | 32 | 8224 |
 
-重新运行后，检查自己的输出是否符合上述配置，并查看 `max_error`。
+After rerunning, check whether your output matches the configuration above and inspect `max_error`.
 
-### 4. 复现计时表和堆叠柱状图
+### 4. Reproduce the timing table and stacked bar chart
 
-继续运行 notebook 中的“导入绘图库”“测量不同长度”“堆叠柱状图”和“查看 CPU/GPU 误差”单元格。
+Continue running the notebook cells titled "Import plotting libraries", "Measure different lengths", "Stacked bar chart", and "View CPU/GPU errors".
 
-程序会测量 notebook 中配置的 16 组长度（512 至 16777216，包含 263149），并在 Colab `/content` 生成：
+The program measures the 16 vector lengths configured in the notebook (512 to 16777216, including 263149) and generates the following files under `/content` in Colab:
 
-| 文件 | 内容 |
+| File | Contents |
 | --- | --- |
-| `timing_results.csv` | 每个长度的线程配置、三段耗时和最大误差 |
-| `timing_breakdown.png` | H2D、kernel、D2H 的堆叠柱状图 |
+| `timing_results.csv` | Thread configurations, three-stage timings, and maximum errors for each length |
+| `timing_breakdown.png` | Stacked bar chart of H2D, kernel, and D2H times |
 
-当前实现每个长度只测量一次，不预热、不重复取平均。CPU 参考计算、内存分配和结果校验不计入三段时间；计时边界会等待 GPU 完成。重新运行时耗时会波动，不要求与 notebook 已保存的数值完全一致。
+The current implementation measures each length only once, without warmup or averaging over repeated runs. CPU reference computation, memory allocation, and result validation are excluded from the three-stage timings; the timing boundaries wait for the GPU to finish. Timings fluctuate between runs and do not need to match the values already saved in the notebook exactly.
 
-### 5. 复现 Achieved Occupancy
+### 5. Reproduce Achieved Occupancy
 
-先检查 Nsight Compute 的分析模块：
+First check the Nsight Compute analysis sections:
 
 ```python
 !ncu --list-sections
 ```
 
-再分别运行：
+Then run each command separately:
 
 ```python
 !ncu --section Occupancy ./vecAdd 512
@@ -134,24 +134,24 @@ N,threads,blocks,H2D_ms,kernel_ms,D2H_ms,max_error
 !ncu --section Occupancy ./vecAdd 263149
 ```
 
-读取输出中 **Achieved Occupancy** 一行，不要读取 **Theoretical Occupancy**。
+Read the **Achieved Occupancy** row in the output, not **Theoretical Occupancy**.
 
-当前 notebook 保存的一次 T4 运行结果为：
+The results of one T4 run saved in the current notebook are:
 
 | N | Achieved Occupancy |
 | ---: | ---: |
 | 512 | 3.12% |
 | 263149 | 33.67% |
 
-这些数值是已保存运行的参考值，重新采集可能变化。绘图使用第 4 步的普通运行时间，不能使用 `ncu` 输出中的程序计时，因为 profiler 会增加开销。
+These values are references from the saved run and may change when collected again. Use the normal execution times from step 4 for plotting, not the program timings printed under `ncu`, because the profiler adds overhead.
 
-### 6. 保存结果与常见问题
+### 6. Save results and common issues
 
-运行完成后，手动下载 `timing_results.csv`、`timing_breakdown.png`，并保存带最新输出的 notebook。Colab 运行时重置后需要重新上传源码、编译和运行。
+After execution, manually download `timing_results.csv` and `timing_breakdown.png`, and save the notebook with the latest outputs. If the Colab runtime is reset, upload the source code again, recompile, and rerun.
 
-- 找不到 `vecAdd.cu`：确认文件已上传到 `/content`，且名称一致。
-- 找不到 `ncu`：当前运行时需要先配置 Nsight Compute。
-- 出现 `ERR_NVGPUCTRPERM`：当前运行时不允许访问性能计数器，需要换到允许该功能的 GPU 环境采集占用率；普通计时和校验仍可单独运行。
+- `vecAdd.cu` not found: confirm that the file has been uploaded to `/content` and that its name matches.
+- `ncu` not found: configure Nsight Compute in the current runtime first.
+- `ERR_NVGPUCTRPERM` appears: the current runtime does not allow access to performance counters. Switch to a GPU environment that permits this access to collect occupancy; normal timing and validation can still run separately.
 
 ---
 
