@@ -1,0 +1,21 @@
+==PROF== Connected to process 2501 (/content/matMul)
+==PROF== Profiling "matMulKernel" - 0: 0%....50%....100% - 1 pass
+type,M,N,P,threads_per_block,blocks_x,blocks_y,total_threads,active_threads,H2D_ms,kernel_ms,D2H_ms,max_abs_error,max_rel_error,validation
+double,1024,8191,8197,256,513,64,8404992,8393728,135.9443,2414.1758,54.9090,0.000000e+00,0.000000e+00,sampled:81
+==PROF== Disconnected from process 2501
+[2501] matMul@127.0.0.1
+  void matMulKernel<double>(const T1 *, const T1 *, T1 *, unsigned long, unsigned long, unsigned long) (513, 64, 1)x(16, 16, 1), Context 1, Stream 7, Device 0, CC 7.5
+    Section: Occupancy
+    ------------------------------- ----------- ------------
+    Metric Name                     Metric Unit Metric Value
+    ------------------------------- ----------- ------------
+    Block Limit SM                        block           16
+    Block Limit Registers                 block            5
+    Block Limit Shared Mem                block           16
+    Block Limit Warps                     block            4
+    Theoretical Active Warps per SM        warp           32
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        99.17
+    Achieved Active Warps Per SM           warp        31.74
+    ------------------------------- ----------- ------------
+

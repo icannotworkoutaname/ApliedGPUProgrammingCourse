@@ -8,22 +8,32 @@ Question 1 is a CUDA vector addition, Question 2 is a 2D matrix multiplication, 
 ## Repository layout
 
 ```
-README.md
-report.docx               report
-vecAdd.cu                 Question 1: CPU and GPU vector addition
-assignment1.ipynb         Question 1: build, run, plots and Nsight Compute profiling, run on Colab
-Q2/                       **TODO**
+README.md                   reproduction steps for all questions
+HW1_Group40.pdf             complete report
+report.tex                  report source
+kth-logo.png                KTH cover logo
+Q1/
+    vecAdd.cu               CPU and GPU vector addition
+    assignment1.ipynb       build, run, plots and Nsight Compute profiling
+    timing_breakdown.png    saved timing plot
+Q2/
+    matMul.cu               float/double 2D matrix multiplication
+    benchmark.py            timing sweep and stacked bar charts
+    hw1_q2_colab.ipynb      self-contained Colab execution and saved outputs
+    README.md               build, run and profiling commands
+    results/                measured CSV data, plots and Nsight Compute logs
 Q3/
-    qft_bench_naive.c     benchmark provided by the course, unmodified
-    hw1_q3_colab.ipynb    every command used for Question 3, run on Colab
+    qft_bench_naive.c       benchmark provided by the course, unmodified
+    hw1_q3_colab.ipynb      commands used for Question 3
+    assets/                 screenshots used in the report
 ```
 
 ## Environment
 
-Question 3 was run on Google Colab: Tesla T4 (compute capability 7.5), Ubuntu 24.04, NVIDIA driver 580.82.07.
+- Questions 1 and 3: Google Colab, Tesla T4 (compute capability 7.5), Ubuntu 24.04, NVIDIA driver 580.82.07. Question 1 used CUDA Toolkit 13.0.88 and Nsight Compute 2025.3.1.
+- Question 2: Google Colab, Tesla T4 (compute capability 7.5), NVIDIA driver 580.82.07, CUDA Toolkit 13.0.88 and Nsight Compute 2025.3.1. The notebook records the complete run.
 
-**TODO:** CUDA toolkit version (`nvcc --version`) and Nsight Systems version (`nsys --version`) for Question 3, from the Environment cell of the notebook.
-**TODO:** environment used for Question 2.
+The submitted plots and occupancy values are the saved runs described in the report. Timing values vary between runs; profiler-instrumented timings are not used for the plots.
 
 ---
 
@@ -35,8 +45,8 @@ Question 3 was run on Google Colab: Tesla T4 (compute capability 7.5), Ubuntu 24
 
 需要两个文件：
 
-- [assignment1.ipynb](assignment1.ipynb)：编译、运行、绘图和 Nsight 分析。
-- [vecAdd.cu](vecAdd.cu)：CPU/GPU 向量加法源码。
+- [assignment1.ipynb](Q1/assignment1.ipynb)：编译、运行、绘图和 Nsight 分析。
+- [vecAdd.cu](Q1/vecAdd.cu)：CPU/GPU 向量加法源码。
 
 当前 notebook 保存的运行环境为 **Tesla T4、CUDA Toolkit 13.0.88**；源码每个 block 使用 **32 个线程**。
 
@@ -149,11 +159,29 @@ N,threads,blocks,H2D_ms,kernel_ms,D2H_ms,max_error
 
 ### Source files
 
+- `Q2/matMul.cu`: naive row-major matrix multiplication with a templated `float`/`double` kernel, 2D grid, CPU validation and three-stage timing.
+- `Q2/benchmark.py`: runs both data types and saves CSV files and stacked bar charts under `Q2/results/`.
+- `Q2/README.md`: complete build, run, benchmark and Nsight Compute commands.
+
 ### Build
+
+```bash
+cd Q2
+nvcc -O3 -std=c++17 -arch=sm_75 matMul.cu -o matMul
+```
 
 ### Run
 
+```bash
+./matMul 128 256 32 double
+./matMul 1024 8191 8197 double
+./matMul 128 256 32 float
+python benchmark.py
+```
+
 ### Reproducing the answers
+
+Open `Q2/hw1_q2_colab.ipynb` in Colab, select a T4 runtime and run all cells to reproduce every Q2 result. Alternatively, run `python benchmark.py` after building to regenerate `timing_double.csv`, `timing_float.csv`, `timing_double.png` and `timing_float.png`. Use the `ncu --section Occupancy` commands in `Q2/README.md` to reproduce the two occupancy measurements. The normal timing runs, not profiler-instrumented runs, generate the report plots.
 
 ---
 

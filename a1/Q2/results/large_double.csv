@@ -1,0 +1,2 @@
+type,M,N,P,threads_per_block,blocks_x,blocks_y,total_threads,active_threads,H2D_ms,kernel_ms,D2H_ms,max_abs_error,max_rel_error,validation
+double,1024,8191,8197,256,513,64,8404992,8393728,130.1911,697.6656,45.5450,0.000000e+00,0.000000e+00,sampled:81

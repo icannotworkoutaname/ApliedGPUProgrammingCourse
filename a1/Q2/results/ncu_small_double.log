@@ -1,0 +1,28 @@
+==PROF== Connected to process 2456 (/content/matMul)
+==PROF== Profiling "matMulKernel" - 0: 0%....50%....100% - 1 pass
+type,M,N,P,threads_per_block,blocks_x,blocks_y,total_threads,active_threads,H2D_ms,kernel_ms,D2H_ms,max_abs_error,max_rel_error,validation
+double,128,256,32,256,2,8,4096,4096,0.1740,1198.4824,0.1174,0.000000e+00,0.000000e+00,full
+==PROF== Disconnected from process 2456
+[2456] matMul@127.0.0.1
+  void matMulKernel<double>(const T1 *, const T1 *, T1 *, unsigned long, unsigned long, unsigned long) (2, 8, 1)x(16, 16, 1), Context 1, Stream 7, Device 0, CC 7.5
+    Section: Occupancy
+    ------------------------------- ----------- ------------
+    Metric Name                     Metric Unit Metric Value
+    ------------------------------- ----------- ------------
+    Block Limit SM                        block           16
+    Block Limit Registers                 block            5
+    Block Limit Shared Mem                block           16
+    Block Limit Warps                     block            4
+    Theoretical Active Warps per SM        warp           32
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        24.92
+    Achieved Active Warps Per SM           warp         7.97
+    ------------------------------- ----------- ------------
+
+    OPT   Est. Local Speedup: 75.08%                                                                                    
+          The difference between calculated theoretical (100.0%) and measured achieved occupancy (24.9%) can be the     
+          result of warp scheduling overheads or workload imbalances during the kernel execution. Load imbalances can   
+          occur between warps within a block as well as across blocks of the same kernel. See the CUDA Best Practices   
+          Guide (https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#occupancy) for more details on     
+          optimizing occupancy.                                                                                         
+
