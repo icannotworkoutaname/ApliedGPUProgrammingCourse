@@ -1,0 +1,72 @@
+--- run_upstream.c
++++ run.c
+@@ -7,6 +7,9 @@
+ #include <math.h>
+ #include <string.h>
+ #include <fcntl.h>
++#if defined(Q3_CUDA_NAIVE) || defined(Q3_CUDA_CACHED)
++#include "matmul_cuda.h"
++#endif
+ #if defined _WIN32
+     #include "win.h"
+ #else
+@@ -166,9 +169,18 @@
+     read_checkpoint(checkpoint_path, &t->config, &t->weights, &t->fd, &t->data, &t->file_size);
+     // allocate the RunState buffers
+     malloc_run_state(&t->state, &t->config);
++#ifdef Q3_CUDA_CACHED
++    Config *p = &t->config;
++    int max_n = p->dim > p->hidden_dim ? p->dim : p->hidden_dim;
++    int max_d = max_n > p->vocab_size ? max_n : p->vocab_size;
++    cuda_matmul_init(t->data, (size_t)t->file_size, max_n, max_d);
++#endif
+ }
+ 
+ void free_transformer(Transformer* t) {
++#ifdef Q3_CUDA_CACHED
++    cuda_matmul_free();
++#endif
+     // close the memory mapping
+     if (t->data != MAP_FAILED) { munmap(t->data, t->file_size); }
+     if (t->fd != -1) { close(t->fd); }
+@@ -214,7 +226,19 @@
+     }
+ }
+ 
++#ifdef Q3_COUNT
++static unsigned long long matmul_calls;
++#endif
++
+ void matmul(float* xout, float* x, float* w, int n, int d) {
++#ifdef Q3_COUNT
++    ++matmul_calls;
++#endif
++#if defined(Q3_CUDA_NAIVE)
++    cuda_matmul_naive(xout, x, w, n, d);
++#elif defined(Q3_CUDA_CACHED)
++    cuda_matmul_cached(xout, x, w, n, d);
++#else
+     // W (d,n) @ x (n,) -> xout (d,)
+     // by far the most amount of time is spent inside this little function
+     int i;
+@@ -226,9 +250,10 @@
+         }
+         xout[i] = val;
+     }
++#endif
+ }
+ 
+ float* forward(Transformer* transformer, int token, int pos) {
+ 
+     // a few convenience variables
+     Config* p = &transformer->config;
+@@ -968,6 +993,9 @@
+     free_sampler(&sampler);
+     free_tokenizer(&tokenizer);
+     free_transformer(&transformer);
++#ifdef Q3_COUNT
++    fprintf(stderr, "matmul calls: %llu\n", matmul_calls);
++#endif
+     return 0;
+ }
+ #endif
