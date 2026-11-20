@@ -1,0 +1,32 @@
+== carveout 0%
+Validation: max|basic-tiled| = 0.000e+00, max|basic-CPU| = 0.000e+00, max|tiled-CPU| = 0.000e+00 -> PASS
+Kernel time (CUDA events, avg of 100 launches): basic 14.743 us, tiled 10.107 us
+    Duration                         us         4.22
+    Shared Memory Configuration Size           Kbyte            8.19
+    Block Limit Shared Mem                block            4
+    Theoretical Occupancy                     %        33.33
+    Achieved Occupancy                        %        28.65
+== carveout 25%
+Validation: max|basic-tiled| = 0.000e+00, max|basic-CPU| = 0.000e+00, max|tiled-CPU| = 0.000e+00 -> PASS
+Kernel time (CUDA events, avg of 100 launches): basic 9.902 us, tiled 9.841 us
+    Duration                         us         3.39
+    Shared Memory Configuration Size           Kbyte          102.40
+    Block Limit Shared Mem                block           61
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        33.54
+== carveout 50%
+Validation: max|basic-tiled| = 0.000e+00, max|basic-CPU| = 0.000e+00, max|tiled-CPU| = 0.000e+00 -> PASS
+Kernel time (CUDA events, avg of 100 launches): basic 7.265 us, tiled 7.885 us
+    Duration                         us         3.39
+    Shared Memory Configuration Size           Kbyte          102.40
+    Block Limit Shared Mem                block           61
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        33.23
+== carveout 100%
+Validation: max|basic-tiled| = 0.000e+00, max|basic-CPU| = 0.000e+00, max|tiled-CPU| = 0.000e+00 -> PASS
+Kernel time (CUDA events, avg of 100 launches): basic 7.673 us, tiled 7.586 us
+    Duration                         us         3.36
+    Shared Memory Configuration Size           Kbyte          102.40
+    Block Limit Shared Mem                block           61
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        33.24

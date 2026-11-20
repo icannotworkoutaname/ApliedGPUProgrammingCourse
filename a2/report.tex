@@ -1,0 +1,242 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\definecolor{kthblue}{HTML}{004791}
+\usepackage[hyphens,spaces,obeyspaces]{xurl}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{needspace}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{hyperref}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\emergencystretch=2em
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.18}
+\renewcommand{\contentsname}{}
+\newcommand{\tocentry}[1]{\addcontentsline{toc}{section}{#1}}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=kthblue,
+    urlcolor=kthblue,
+    pdftitle={Applied GPU Programming -- Assignment 2},
+    pdfauthor={Group 40: Yuanyu Zhang, Hongen Wang, Xinyang Li},
+}
+\title{Applied GPU Programming -- Assignment 2}
+\author{Group 40 -- Yuanyu Zhang, Hongen Wang, Xinyang Li}
+\date{20 November 2026}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Applied GPU Programming -- Group 40}
+\fancyhead[R]{\small Assignment 2}
+\fancyfoot[C]{\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\setlength{\headheight}{14pt}
+
+\begin{document}
+
+\pagenumbering{gobble}
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+\thispagestyle{empty}
+\centering
+\vspace*{1.0cm}
+
+\begingroup
+\setlength{\fboxsep}{12pt}
+\colorbox{kthblue}{\includegraphics[height=2.8cm]{kth-logo.png}}
+\endgroup
+
+\vspace{0.35cm}
+{\footnotesize KTH Electrical Engineering and Computer Science}
+
+\vspace{1.6cm}
+
+{\LARGE\bfseries Assignment 2\\[0.45cm]
+1D Convolution, Tiled Matrix Multiplication\\[0.25cm]
+and Llama~2 Inference on the GPU}
+
+\vspace{1.2cm}
+
+{\small Applied GPU Programming \textperiodcentered\ HT26}
+
+\vfill
+
+{\large Group 40}\\[0.55cm]
+{\normalsize Yuanyu Zhang \textperiodcentered\ Hongen Wang \textperiodcentered\ Xinyang Li}
+
+\vspace{1.4cm}
+
+{\small Stockholm, 20 November 2026}
+\vspace*{0.3cm}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+\pagenumbering{arabic}
+
+\tableofcontents
+\vspace{1.5em}
+
+\section*{Experimental environments}
+\tocentry{Experimental environments}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{@{}lYYY@{}}
+\toprule
+\textbf{Question} & \textbf{GPU and system} & \textbf{CUDA and profilers} & \textbf{Purpose} \\
+\midrule
+Q1 & RTX 3060 Laptop GPU (CC 8.6, 30 SMs), Windows 11 + WSL2 Ubuntu 24.04, driver 566.36 & CUDA 12.6.85, Nsight Systems 2026.6.1, Nsight Compute 2024.3.2 & Timing, correctness and profiling \\
+% Q2 & ... & ... & ... \\
+% Q3 & ... & ... & ... \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Kernel times in Q1 are GPU-side durations from Nsight Systems, taken as the median of 102 launches. We did not use CUDA events for this. Under WSL2 the event time of 100 back-to-back launches (6--17\,\(\mu\)s per launch) mostly measures launch overhead and changes a lot from run to run.
+
+% =====================================================================
+\clearpage
+\section*{Question 1 --- 1D Convolution}
+\tocentry{Question 1 --- 1D Convolution}
+
+\texttt{conv1d.cu} completes the course skeleton. We added a \texttt{width} argument to both kernels because the skeleton signatures have no length parameter. Both kernels use one thread per output element and \(\lceil N/T\rceil\) blocks of \(T=\) \texttt{TILE\_WIDTH} threads. \texttt{convolution\_1D\_basic} reads the inputs and the mask directly from global memory. In \texttt{convolution\_1D\_tiled}, each block first copies its \(T\) inputs, two halo elements on each side and the 5 mask values into shared memory, and then computes from there. Inputs outside the array count as 0. The two kernels and the CPU reference give identical outputs.
+
+\subsection*{1. Application domains}
+Image processing and computer vision use convolution for blurring and edge detection, for example with Gaussian or Sobel filters. In audio and signal processing, FIR filters and noise reduction are 1D convolutions over the samples. Convolutional neural networks are built from convolution layers.
+
+\subsection*{2. Global-memory reads and writes}
+\textbf{Basic kernel.} Every output needs 5 inputs and 5 mask values. At the two ends of the array some neighbours lie outside and are skipped (2 + 1 at the start, 1 + 2 at the end), which saves 6 input reads and 6 mask reads.
+
+\textbf{Tiled kernel.} Every input element is read once into its own tile. Each of the \(B-1\) boundaries between neighbouring tiles adds 4 reads, since both blocks load 2 elements of the other tile as halo. Every block also reads the mask once. With \(B=\lceil N/T\rceil\):
+\[
+R_\text{basic}=2(5N-6)=10N-12, \qquad
+R_\text{tiled}=N+4(B-1)+5B, \qquad
+W_\text{basic}=W_\text{tiled}=N.
+\]
+Both kernels write each output once. For \(N=16{,}384\) and \(T=128\) the basic kernel reads 163,828 times and the tiled kernel 17,532 times, about 9.3 times fewer. This counts load instructions in the code. Nsight Compute reports a 74.7\% L1 hit rate for the basic kernel (3.7\% for the tiled one), so the difference in DRAM traffic is smaller than the count suggests.
+
+\subsection*{3. Results and tile size}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.73\textwidth]{Q1/results/screenshots/q13_output_1.png}\\[4pt]
+\includegraphics[width=0.73\textwidth]{Q1/results/screenshots/q13_output_2.png}
+\caption{Output for \(N=1{,}024\) to \(16{,}384\) with \texttt{TILE\_WIDTH} = 128. All five runs pass the validation.}
+\label{fig:q1-output}
+\end{figure}
+
+\texttt{TILE\_WIDTH} is a compile-time constant, so we compiled one binary per tile size and measured both kernels with Nsight Systems (Table~\ref{tab:q1-sweep}).
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}rrrrrrrr@{}}
+\toprule
+\(N\) & \(T=32\) & 64 & 128 & 256 & 512 & 1024 & Basic (\(T=128\)) \\
+\midrule
+1,024  & 1.73 & \textbf{1.54} & 1.57 & 1.60 & 1.73 & 1.79 & 1.22 \\
+2,048  & 1.76 & \textbf{1.57} & \textbf{1.57} & 1.60 & 1.70 & 1.92 & 1.25 \\
+4,096  & 1.86 & 1.66 & 1.63 & \textbf{1.60} & 1.70 & 1.89 & 1.28 \\
+8,192  & 1.95 & 1.73 & \textbf{1.70} & 1.73 & 1.73 & 1.92 & 1.35 \\
+16,384 & 2.82 & 1.82 & \textbf{1.79} & 1.82 & 1.89 & 1.92 & 1.50 \\
+\bottomrule
+\end{tabular}
+\caption{Tiled kernel time in \(\mu\)s per tile size (median of 102 launches, fastest in bold) and the basic kernel for comparison.}
+\label{tab:q1-sweep}
+\end{table}
+
+\(T=128\) has the lowest tiled time for \(N=2{,}048\), \(8{,}192\) and \(16{,}384\). For 1,024 and 4,096 it is 32\,ns behind the best tile. That is one step of the timer, so we use \(T=128\) for all sizes.
+
+The reason is the per-SM limits of the GPU. It has 30 SMs, and each SM holds at most 16 blocks and 48 warps (1,536 threads). With \(T=32\) or 64, 16 blocks give only 512 or 1,024 threads per SM. Small tiles also repeat the halo and mask loads more often, and \(T=32\) is clearly the slowest at \(N=16{,}384\) (2.82\,\(\mu\)s). Large tiles give few blocks. For \(N=1{,}024\), \(T=1{,}024\) runs as a single block on one SM, and its barrier waits for 32 warps. \(T=128\) is the smallest multiple of 32 above 96 threads (\(1{,}536/16\)), so an SM can be filled, and \(N=16{,}384\) still gives 128 blocks, more than four per SM.
+
+The tiled kernel is 0.3--0.4\,\(\mu\)s slower than the basic kernel for every \(N\). The input is at most 64\,KB and stays in the L1 and L2 caches, so the repeated loads of the basic kernel cost little. Each tiled block has extra work: the barrier, the stores to shared memory, the mask copy and the halo branches. The branches cause divergence. Nsight Compute shows 29.3 active threads per warp on average, against 32 for the basic kernel.
+
+\subsection*{4. Profiling}
+We profiled \(N=16{,}384\) with \(T=128\), which gives 128 blocks.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Q1/results/screenshots/nsys_overview.png}
+\caption{Nsight Systems timeline of the whole program. The tooltip shows the first \texttt{cudaMalloc}.}
+\label{fig:q1-nsys-overview}
+\end{figure}
+
+\textbf{Hotspot.} In the whole program the first \texttt{cudaMalloc} takes 139\,ms (Figure~\ref{fig:q1-nsys-overview}), 88.8\% of the CUDA API time, because it creates the CUDA context. All kernels and memory copies together use about 0.36\,ms of GPU time.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Q1/results/screenshots/nsys_kernels_zoom.png}
+\caption{Zoomed timeline of the kernel launches. The tooltip shows one \texttt{convolution\_1D\_tiled} launch.}
+\label{fig:q1-nsys-zoom}
+\end{figure}
+
+In Figure~\ref{fig:q1-nsys-zoom}, one tiled launch runs for 1.76\,\(\mu\)s on the GPU, while the median \texttt{cudaLaunchKernel} call takes 7.6\,\(\mu\)s on the CPU. The GPU is therefore idle between kernels most of the time.
+
+Inside the kernel, memory and compute throughput are both 11\% of peak (Table~\ref{tab:q1-ncu}). In 90\% of the cycles no warp is ready to issue. The two largest stall reasons are misses in the immediate constant cache, which holds the kernel arguments, and scoreboard waits on global loads. The kernel is limited by latency, and there are too few warps per SM to hide it.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}YrYr@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} & \textbf{Metric} & \textbf{Value} \\
+\midrule
+Memory / compute throughput & 11.4\% / 11.4\% & Occupancy (theor.\ / achieved) & 100\% / 33.6\% \\
+Shared memory per block & 548\,B + 1\,KB driver & Block limit: warps / shared mem & 12 / 19 \\
+Shared memory configuration & 32.8\,KB & Cycles with no eligible warp & 89.8\% \\
+\bottomrule
+\end{tabularx}
+\caption{Nsight Compute metrics of \texttt{convolution\_1D\_tiled} (\(N=16{,}384\), \(T=128\)).}
+\label{tab:q1-ncu}
+\end{table}
+
+\textbf{Shared memory and occupancy.} Each block uses 548 bytes of shared memory, 528 for the tile and 20 for the mask. The driver reserves another 1\,KB per block. With about 4.3 blocks on each SM this adds up to 6.7\,KB, or 20\% of the 32.8\,KB configured. Shared memory would allow 19 blocks per SM and the warp count allows 12, so neither limits occupancy here. The achieved occupancy of 33.6\% (16.1 of 48 warps) comes from the grid size. 128 blocks of 4 warps over 30 SMs is about 17 warps per SM, and the grid fills only 0.36 of one wave.
+
+\textbf{Shared-memory capacity.} We set the carveout with \texttt{cudaFuncSetAttribute} (Table~\ref{tab:q1-carveout}).
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Carveout} & \textbf{Shared memory} & \textbf{Block limit} & \textbf{Occupancy} & \textbf{Duration} \\
+\midrule
+not set & 32.8\,KB & 19 & 100\% / 33.6\% & 3.33\,\(\mu\)s \\
+0\% & 8.2\,KB & 4 & 33.3\% / 28.7\% & 4.22\,\(\mu\)s \\
+25\% / 50\% / 100\% & 102.4\,KB & 61 & 100\% / 33.2--33.5\% & 3.36--3.39\,\(\mu\)s \\
+\bottomrule
+\end{tabular}
+\caption{Effect of the carveout. Block limit from shared memory, theoretical / achieved occupancy, Nsight Compute duration.}
+\label{tab:q1-carveout}
+\end{table}
+
+For 25\%, 50\% and 100\% the driver picks 102.4\,KB. Duration and occupancy stay as with the default 32.8\,KB, because shared memory was not the limit before. More capacity does not help. With 0\% only 8.2\,KB is available. Then 4 blocks of about 1.6\,KB fill an SM, theoretical occupancy drops to 33\%, and the kernel takes 4.22\,\(\mu\)s instead of 3.33\,\(\mu\)s, 27\% slower.
+
+% =====================================================================
+\clearpage
+\section*{Question 2 --- Tiled Matrix Multiplication}
+\tocentry{Question 2 --- Tiled Matrix Multiplication}
+
+% TODO (Q2)
+
+% =====================================================================
+\clearpage
+\section*{Question 3 --- Accelerate Llama2 Inference}
+\tocentry{Question 3 --- Accelerate Llama2 Inference}
+
+% TODO (Q3)
+
+% =====================================================================
+% Optional bonus
+% \clearpage
+% \section*{Bonus --- A Particle Simulation Application}
+% \tocentry{Bonus --- A Particle Simulation Application}
+
+\end{document}

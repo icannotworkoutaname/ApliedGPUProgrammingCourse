@@ -1,0 +1,140 @@
+==PROF== Connected to process 790 (/home/yuanyu/hw2q1/conv1d_T128)
+==PROF== Profiling "convolution_1D_basic": 0%....50%....100% - 14 passes
+N = 16384, MASK_WIDTH = 5, TILE_WIDTH = 128, blocks = 128
+Timing - Allocated host memory. 		Elasped 6 microseconds 
+Timing - Allocated device memory. 		Elasped 284426 microseconds 
+Timing - Initialized host data. 		Elasped 322 microseconds 
+Timing - Copying data to the GPU.. 		Elasped 1031 microseconds 
+Timing - Finished 1D convolution(basic). 		Elasped 355453 microseconds 
+  basic P[0..7]: 1.1126 1.3197 1.3753 1.6398 1.3803 0.8342 1.2033 1.3674
+Timing - Copying output P to the CPU and print out the results. 		Elasped 128 microseconds 
+Timing - Finished 1D convolution(tiled). 		Elasped 122 microseconds 
+  tiled P[0..7]: 1.1126 1.3197 1.3753 1.6398 1.3803 0.8342 1.2033 1.3674
+Timing - Copying output P to the CPU and print out the results. 		Elasped 47 microseconds 
+Validation: max|basic-tiled| = 0.000e+00, max|basic-CPU| = 0.000e+00, max|tiled-CPU| = 0.000e+00 -> PASS
+Kernel time (CUDA events, avg of 100 launches): basic 19.023 us, tiled 21.451 us
+Timing - Free memory resources. 		Elasped 319 microseconds 
+==PROF== Disconnected from process 790
+[790] conv1d_T128@127.0.0.1
+  convolution_1D_basic(float *, float *, float *, int) (128, 1, 1)x(128, 1, 1), Context 1, Stream 7, Device 0, CC 8.6
+    Section: GPU Speed Of Light Throughput
+    ----------------------- ----------- ------------
+    Metric Name             Metric Unit Metric Value
+    ----------------------- ----------- ------------
+    DRAM Frequency                  Ghz         6.89
+    SM Frequency                    Ghz         1.24
+    Elapsed Cycles                cycle         3521
+    Memory Throughput                 %        11.94
+    DRAM Throughput                   %         7.53
+    Duration                         us         2.85
+    L1/TEX Cache Throughput           %        23.56
+    L2 Cache Throughput               %         6.42
+    SM Active Cycles              cycle      1738.30
+    Compute (SM) Throughput           %        11.94
+    ----------------------- ----------- ------------
+
+    OPT   This kernel grid is too small to fill the available resources on this device, resulting in only 0.4 full      
+          waves across all SMs. Look at Launch Statistics for more details.                                             
+
+    Section: Memory Workload Analysis
+    --------------------------- ----------- ------------
+    Metric Name                 Metric Unit Metric Value
+    --------------------------- ----------- ------------
+    Memory Throughput               Gbyte/s        24.90
+    Mem Busy                              %         6.52
+    Max Bandwidth                         %        11.94
+    L1/TEX Hit Rate                       %        74.66
+    L2 Compression Success Rate           %            0
+    L2 Compression Ratio                               0
+    L2 Hit Rate                           %        58.24
+    Mem Pipes Busy                        %        11.94
+    --------------------------- ----------- ------------
+
+    Section: Scheduler Statistics
+    ---------------------------- ----------- ------------
+    Metric Name                  Metric Unit Metric Value
+    ---------------------------- ----------- ------------
+    One or More Eligible                   %        12.79
+    Issued Warp Per Scheduler                        0.13
+    No Eligible                            %        87.21
+    Active Warps Per Scheduler          warp         3.97
+    Eligible Warps Per Scheduler        warp         0.24
+    ---------------------------- ----------- ------------
+
+    OPT   Est. Local Speedup: 87.21%                                                                                    
+          Every scheduler is capable of issuing one instruction per cycle, but for this kernel each scheduler only      
+          issues an instruction every 7.8 cycles. This might leave hardware resources underutilized and may lead to     
+          less optimal performance. Out of the maximum of 12 warps per scheduler, this kernel allocates an average of   
+          3.97 active warps per scheduler, but only an average of 0.24 warps were eligible per cycle. Eligible warps    
+          are the subset of active warps that are ready to issue their next instruction. Every cycle with no eligible   
+          warp results in no instruction being issued and the issue slot remains unused. To increase the number of      
+          eligible warps, reduce the time the active warps are stalled by inspecting the top stall reasons on the Warp  
+          State Statistics and Source Counters sections.                                                                
+
+    Section: Warp State Statistics
+    ---------------------------------------- ----------- ------------
+    Metric Name                              Metric Unit Metric Value
+    ---------------------------------------- ----------- ------------
+    Warp Cycles Per Issued Instruction             cycle        31.03
+    Warp Cycles Per Executed Instruction           cycle        35.98
+    Avg. Active Threads Per Warp                                   32
+    Avg. Not Predicated Off Threads Per Warp                    31.24
+    ---------------------------------------- ----------- ------------
+
+    WRN   The optional metric smsp__pcsamp_sample_count could not be found. Collecting it as an additional metric could 
+          enable the rule to provide more guidance.                                                                     
+    ----- --------------------------------------------------------------------------------------------------------------
+    OPT   Est. Speedup: 41.04%                                                                                          
+          On average, each warp of this kernel spends 12.7 cycles being stalled waiting for an immediate constant cache 
+          (IMC) miss. A read from constant memory costs one memory read from device memory only on a cache miss;        
+          otherwise, it just costs one read from the constant cache. Immediate constants are encoded into the SASS      
+          instruction as 'c[bank][offset]'. Accesses to different addresses by threads within a warp are serialized,    
+          thus the cost scales linearly with the number of unique addresses read by all threads within a warp. As       
+          such, the constant cache is best when threads in the same warp access only a few distinct locations. If all   
+          threads of a warp access the same location, then constant memory can be as fast as a register access. This    
+          stall type represents about 41.0% of the total average of 31.0 cycles between issuing two instructions.       
+    ----- --------------------------------------------------------------------------------------------------------------
+    INF   Check the Warp Stall Sampling (All Samples) table for the top stall locations in your source based on         
+          sampling data. The Kernel Profiling Guide                                                                     
+          (https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#metrics-reference) provides more details    
+          on each stall reason.                                                                                         
+
+    Section: Launch Statistics
+    -------------------------------- --------------- ---------------
+    Metric Name                          Metric Unit    Metric Value
+    -------------------------------- --------------- ---------------
+    Block Size                                                   128
+    Function Cache Configuration                     CachePreferNone
+    Grid Size                                                    128
+    Registers Per Thread             register/thread              20
+    Shared Memory Configuration Size           Kbyte           16.38
+    Driver Shared Memory Per Block       Kbyte/block            1.02
+    Dynamic Shared Memory Per Block       byte/block               0
+    Static Shared Memory Per Block        byte/block               0
+    # SMs                                         SM              30
+    Threads                                   thread           16384
+    Uses Green Context                                             0
+    Waves Per SM                                                0.36
+    -------------------------------- --------------- ---------------
+
+    Section: Occupancy
+    ------------------------------- ----------- ------------
+    Metric Name                     Metric Unit Metric Value
+    ------------------------------- ----------- ------------
+    Block Limit SM                        block           16
+    Block Limit Registers                 block           21
+    Block Limit Shared Mem                block           16
+    Block Limit Warps                     block           12
+    Theoretical Active Warps per SM        warp           48
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        31.92
+    Achieved Active Warps Per SM           warp        15.32
+    ------------------------------- ----------- ------------
+
+    OPT   Est. Speedup: 68.08%                                                                                          
+          The difference between calculated theoretical (100.0%) and measured achieved occupancy (31.9%) can be the     
+          result of warp scheduling overheads or workload imbalances during the kernel execution. Load imbalances can   
+          occur between warps within a block as well as across blocks of the same kernel. See the CUDA Best Practices   
+          Guide (https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#occupancy) for more details on     
+          optimizing occupancy.                                                                                         
+

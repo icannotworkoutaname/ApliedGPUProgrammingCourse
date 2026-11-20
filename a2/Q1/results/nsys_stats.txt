@@ -1,0 +1,38 @@
+Generating SQLite file /mnt/d/ApliedGPUProgrammingCourse/a2/Q1/results/q1_nsys.sqlite from /mnt/d/ApliedGPUProgrammingCourse/a2/Q1/results/q1_nsys.nsys-rep
+Processing [/mnt/d/ApliedGPUProgrammingCourse/a2/Q1/results/q1_nsys.sqlite] with [/home/yuanyu/nsys2026/target-linux-x64/reports/cuda_api_sum.py]... 
+
+ ** CUDA API Summary (cuda_api_sum):
+
+ Time (%)  Total Time (ns)  Num Calls   Avg (ns)   Med (ns)   Min (ns)  Max (ns)   StdDev (ns)           Name         
+ --------  ---------------  ---------  ----------  ---------  --------  ---------  -----------  ----------------------
+     88.8        139409074          3  46469691.3     6700.0      4598  139397776   80478082.1  cudaMalloc            
+      3.4          5310031          2   2655015.5  2655015.5      2572    5307459    3751121.6  cudaEventCreate       
+      3.3          5118605          3   1706201.7   415722.0     12686    4690197    2592061.1  cudaFree              
+      2.8          4441164        204     21770.4     7587.5      3792    2356746     164701.5  cudaLaunchKernel      
+      1.2          1815202          2    907601.0   907601.0    785059    1030143     173300.6  cudaEventSynchronize  
+      0.4           645753          5    129150.6    64708.0     36342     424217     165358.4  cudaMemcpy            
+      0.0            64641          3     21547.0    21693.0     16590      26358       4885.6  cudaDeviceSynchronize 
+      0.0            61325          4     15331.3    10412.5      7709      32791      11750.7  cudaEventRecord       
+      0.0            57596          2     28798.0    28798.0     14415      43181      20340.6  cudaMemset            
+      0.0             2094          2      1047.0     1047.0       429       1665        874.0  cudaEventDestroy      
+      0.0              631          1       631.0      631.0       631        631          0.0  cuModuleGetLoadingMode
+
+Processing [/mnt/d/ApliedGPUProgrammingCourse/a2/Q1/results/q1_nsys.sqlite] with [/home/yuanyu/nsys2026/target-linux-x64/reports/cuda_gpu_kern_sum.py]... 
+
+ ** CUDA GPU Kernel Summary (cuda_gpu_kern_sum):
+
+ Time (%)  Total Time (ns)  Instances  Avg (ns)  Med (ns)  Min (ns)  Max (ns)  StdDev (ns)                          Name                        
+ --------  ---------------  ---------  --------  --------  --------  --------  -----------  ----------------------------------------------------
+     54.1           181121        102    1775.7    1776.5      1728      1793         16.8  convolution_1D_tiled(float *, float *, float *, int)
+     45.9           153672        102    1506.6    1504.0      1472      2048         56.7  convolution_1D_basic(float *, float *, float *, int)
+
+Processing [/mnt/d/ApliedGPUProgrammingCourse/a2/Q1/results/q1_nsys.sqlite] with [/home/yuanyu/nsys2026/target-linux-x64/reports/cuda_gpu_mem_time_sum.py]... 
+
+ ** CUDA GPU MemOps Summary (by Time) (cuda_gpu_mem_time_sum):
+
+ Time (%)  Total Time (ns)  Count  Avg (ns)  Med (ns)  Min (ns)  Max (ns)  StdDev (ns)           Operation          
+ --------  ---------------  -----  --------  --------  --------  --------  -----------  ----------------------------
+     45.9            12288      2    6144.0    6144.0      5984      6304        226.3  [CUDA memcpy Device-to-Host]
+     44.4            11872      3    3957.3    5696.0       416      5760       3067.1  [CUDA memcpy Host-to-Device]
+      9.7             2592      2    1296.0    1296.0      1280      1312         22.6  [CUDA memset]               
+

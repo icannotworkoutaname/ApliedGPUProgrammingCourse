@@ -1,0 +1,6 @@
+name, compute_cap, driver_version
+NVIDIA GeForce RTX 3060 Laptop GPU, 8.6, 566.36
+Cuda compilation tools, release 12.6, V12.6.85
+Build cuda_12.6.r12.6/compiler.35059454_0
+NVIDIA Nsight Systems version 2026.6.1.218-266139266636v0
+Version 2024.3.2.0 (build 34861637) (public-release)

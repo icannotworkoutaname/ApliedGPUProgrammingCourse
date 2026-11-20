@@ -1,0 +1,14 @@
+N = 2048, MASK_WIDTH = 5, TILE_WIDTH = 128, blocks = 16
+Timing - Allocated host memory. 		Elasped 5 microseconds 
+Timing - Allocated device memory. 		Elasped 176148 microseconds 
+Timing - Initialized host data. 		Elasped 48 microseconds 
+Timing - Copying data to the GPU.. 		Elasped 1732 microseconds 
+Timing - Finished 1D convolution(basic). 		Elasped 26 microseconds 
+  basic P[0..7]: 1.1126 1.3197 1.3753 1.6398 1.3803 0.8342 1.2033 1.3674
+Timing - Copying output P to the CPU and print out the results. 		Elasped 50 microseconds 
+Timing - Finished 1D convolution(tiled). 		Elasped 30 microseconds 
+  tiled P[0..7]: 1.1126 1.3197 1.3753 1.6398 1.3803 0.8342 1.2033 1.3674
+Timing - Copying output P to the CPU and print out the results. 		Elasped 51 microseconds 
+Validation: max|basic-tiled| = 0.000e+00, max|basic-CPU| = 0.000e+00, max|tiled-CPU| = 0.000e+00 -> PASS
+Kernel time (CUDA events, avg of 100 launches): basic 10.192 us, tiled 30.188 us
+Timing - Free memory resources. 		Elasped 373 microseconds 
