@@ -97,7 +97,7 @@ and Llama~2 Inference on the GPU}
 \midrule
 Q1 & RTX 3060 Laptop GPU (CC 8.6, 30 SMs), Windows 11 + WSL2 Ubuntu 24.04, driver 566.36 & CUDA 12.6.85, Nsight Systems 2026.6.1, Nsight Compute 2024.3.2 & Timing, correctness and profiling \\
 % Q2 & ... & ... & ... \\
-% Q3 & ... & ... & ... \\
+Q3 & Tesla T4, Google Colab & CUDA 13.0.88, Nsight Systems 2025.3.1 & Throughput, correctness and profiling \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -231,7 +231,95 @@ For 25\%, 50\% and 100\% the driver picks 102.4\,KB. Duration and occupancy stay
 \section*{Question 3 --- Accelerate Llama2 Inference}
 \tocentry{Question 3 --- Accelerate Llama2 Inference}
 
-% TODO (Q3)
+\subsection*{Setup and implementation}
+The runs used a Tesla T4 in Google Colab, with CUDA 13.0.88 and Nsight Systems 2025.3.1. For the CPU baseline, we compiled Karpathy's FP32 \texttt{run.c} with \texttt{gcc -O3} and ran \texttt{./run stories15M.bin}. For the comparison, all three versions used an empty prompt and the same flags, \texttt{-t 0 -s 42 -n 256}.
+
+In the CUDA kernel, one thread computes the dot product of one weight row and the input vector. Each block has 128 threads. The naive version allocates three buffers and copies the input and weights to the GPU on each call. After the kernel it copies the result back and frees the buffers. The optimized version uploads the checkpoint once and finds each weight matrix by its offset. It uses the same kernel and reuses the input and output buffers.
+
+\subsection*{Correctness and throughput}
+The three runs generated identical text with the same flags. We also ran both CUDA versions with \texttt{CHECK\_MATMUL=1} for up to eight steps. This checked each output element against the CPU result \(y\), with a tolerance of \(10^{-5}+10^{-5}|y|\). Both passed. We used \texttt{--fmad=false} to keep multiplication and addition separate.
+
+The CPU run with the counter made \textbf{9,546 matmul calls}. Each forward pass does seven matmuls per layer across six layers and one for the vocabulary output, giving \(7\times6+1=43\). The run stopped after 222 forward passes.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Run} & \textbf{Achieved tok/s} & \textbf{Relative to matched CPU} \\
+\midrule
+CPU, README command & 43.416167 & --- \\
+CPU, matched workload & 45.926850 & \(1.00\times\) \\
+Naive CUDA & 34.661230 & \(0.75\times\) \\
+Optimized CUDA & 283.697047 & \(6.18\times\) \\
+\bottomrule
+\end{tabular}
+\caption{Achieved tokens per second of the CPU and CUDA versions.}
+\label{tab:q3-toks}
+\end{table}
+
+Figures~\ref{fig:q3-cpu}--\ref{fig:q3-opt} show the original notebook screenshots for the CPU README run and both CUDA runs.
+
+\subsection*{Nsight Systems profiling}
+We profiled both CUDA versions with the same input and flags. The profiles include the checkpoint upload during setup. The throughput values above come from separate runs, and their timer starts after the first forward pass.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Metric} & \textbf{Naive CUDA} & \textbf{Optimized CUDA} \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{CUDA Runtime API}} \\
+\texttt{cudaMalloc} calls & 28,638 & 3 \\
+\texttt{cudaMalloc} total (ms) & 1,182.28 & 184.77 \\
+\texttt{cudaFree} calls & 28,638 & 3 \\
+\texttt{cudaFree} total (ms) & 965.91 & 0.34 \\
+\texttt{cudaMemcpy} calls & 28,638 & 19,093 \\
+\texttt{cudaMemcpy} total (ms) & 4,600.70 & 725.04 \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{GPU memory copies and kernel}} \\
+Host-to-device copies & 19,092 & 9,547 \\
+Host-to-device data (MB) & 13,500.470 & 74.370 \\
+Host-to-device total (ms) & 2,306.40 & 20.46 \\
+Device-to-host copies & 9,546 & 9,546 \\
+Device-to-host data (MB) & 44.272 & 44.272 \\
+Device-to-host total (ms) & 18.87 & 15.42 \\
+\texttt{matvec\_kernel} launches & 9,546 & 9,546 \\
+\texttt{matvec\_kernel} total (ms) & 492.22 & 523.64 \\
+\bottomrule
+\end{tabular}
+\caption{Nsight Systems summary of the naive and optimized CUDA versions.}
+\label{tab:q3-nsys}
+\end{table}
+
+\textbf{Naive bottleneck.} The largest cost was copying the weights to the GPU on every call. Host-to-device copies took 2,306.40\,ms on the GPU, and the kernel took 492.22\,ms. In the CUDA API summary, \texttt{cudaMemcpy} accounted for 66.7\% of the recorded time. Allocation and release took another 31.1\%.
+
+\textbf{After keeping weights on the GPU.} The optimized version uploaded the checkpoint once and copied 9,546 input vectors. That brought host-to-device traffic down to 74.370\,MB and copy time down to 20.46\,ms. It made three allocations at startup and freed the buffers at shutdown. The kernel count and the amount copied back to the CPU stayed the same. Total kernel time went from 492.22 to 523.64\,ms. The optimized version ran \textbf{\(8.18\times\) as fast as naive CUDA} and \textbf{\(6.18\times\) as fast as the matched CPU run}.
+
+{\small The results are saved in \texttt{Q3/hw2\_Q3.ipynb}. The source ZIP contains the modified \texttt{run.c}, CUDA source and \texttt{Makefile}.
+\href{https://github.com/karpathy/llama2.c/tree/350e04fe35433e6d2941dce5a1f53308f87058eb}{Upstream source}\enspace
+\href{https://docs.nvidia.com/nsight-systems/AnalysisGuide/index.html}{Nsight Systems report guide}}
+
+\subsection*{Benchmark screenshots}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{Q3/report_figures/47.jpg}
+\caption{Original CPU backend, README command (execution 47).}
+\label{fig:q3-cpu}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{Q3/report_figures/49.jpg}
+\caption{Naive CUDA backend, matched workload (execution 49).}
+\label{fig:q3-naive}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{Q3/report_figures/50.jpg}
+\caption{Optimized CUDA backend, matched workload (execution 50).}
+\label{fig:q3-opt}
+\end{figure}
 
 % =====================================================================
 % Optional bonus
