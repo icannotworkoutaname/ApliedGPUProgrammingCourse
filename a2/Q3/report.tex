@@ -3,7 +3,8 @@
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage{booktabs}
-\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{float}
 \usepackage{xcolor}
 \usepackage{hyperref}
 
@@ -13,9 +14,6 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
 \renewcommand{\arraystretch}{1.08}
-
-\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
-  keepspaces=true,showstringspaces=false,breaklines=true,breakindent=0pt}
 
 \begin{document}
 {\small\color{courseblue}Applied GPU Programming \enspace\textbullet\enspace Assignment 2, Question 3}\par
@@ -65,8 +63,8 @@ Optimized CUDA & 283.697047 & $6.18\times$ \\
 \end{tabular}
 \end{center}
 
-Appendix~\ref{sec:run-records} gives the complete saved Colab output for all
-four commands.
+Appendix~\ref{sec:run-screenshots} shows the original notebook screenshots
+for the CPU README run and both CUDA runs.
 
 \newpage
 \section{Nsight Systems profiling}
@@ -132,24 +130,28 @@ The implementation and build instructions are in \texttt{matmul\_cuda.cu},
 
 \newpage
 \appendix
-\section{Original Colab run records}
-\label{sec:run-records}
+\section{Original benchmark screenshots}
+\label{sec:run-screenshots}
 
-These are the complete standard output streams saved by the four benchmark
-cells in \texttt{hw2\_Q3.ipynb}. Long lines wrap to fit the page. The
-corresponding text files in \texttt{run\_records/} preserve the saved line
-breaks.
+The screenshots show the executed cells and their \texttt{achieved tok/s}
+output in \texttt{hw2\_Q3.ipynb}.
 
-\subsection*{CPU, README command (execution 47)}
-\lstinputlisting{run_records/cpu_default.txt}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{report_figures/47.jpg}
+  \caption{Original CPU backend, README command (execution 47).}
+\end{figure}
 
-\subsection*{CPU, matched workload and matmul count (execution 48)}
-\lstinputlisting{run_records/cpu_matched.txt}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{report_figures/49.jpg}
+  \caption{Naive CUDA backend, matched workload (execution 49).}
+\end{figure}
 
-\subsection*{Naive CUDA (execution 49)}
-\lstinputlisting{run_records/naive_cuda.txt}
-
-\subsection*{Optimized CUDA (execution 50)}
-\lstinputlisting{run_records/optimized_cuda.txt}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{report_figures/50.jpg}
+  \caption{Optimized CUDA backend, matched workload (execution 50).}
+\end{figure}
 
 \end{document}
