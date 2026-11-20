@@ -1,0 +1,5 @@
+$ ./run stories15M.bin
+Once upon a time, there was a little girl named Lily. She loved to play outside in the park. One day, Lily saw a frog jumping around. The frog was green and jumped around like a ball.
+Lily was a little bit nervous because she had never seen a frog before. But the frog was friendly and wanted to be her friend. So, Lily and the frog played together in the park.
+They jumped and jumped all day long. Lily was so happy to have a new friend. She felt like she had found something special. When it was time to go home, Lily said goodbye to the frog and promised to come back and play again.achieved tok/s: 43.416167
+

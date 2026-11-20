@@ -2,27 +2,20 @@
 \usepackage[top=19mm,bottom=18mm,left=20mm,right=20mm]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-\usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{listings}
 \usepackage{xcolor}
 \usepackage{hyperref}
 
 \definecolor{courseblue}{HTML}{004791}
 \hypersetup{colorlinks=true,linkcolor=courseblue,urlcolor=courseblue,
   pdftitle={Assignment 2, Question 3 - Accelerate Llama2 Inference}}
-\graphicspath{{report_figures/}}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
-\setlength{\abovecaptionskip}{5pt}
 \renewcommand{\arraystretch}{1.08}
 
-\newcommand{\outputpanel}[2]{%
-  \begin{minipage}[t]{0.482\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{#1}\par
-    {\footnotesize #2}
-  \end{minipage}%
-}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
+  keepspaces=true,showstringspaces=false,breaklines=true,breakindent=0pt}
 
 \begin{document}
 {\small\color{courseblue}Applied GPU Programming \enspace\textbullet\enspace Assignment 2, Question 3}\par
@@ -72,15 +65,8 @@ Optimized CUDA & 283.697047 & $6.18\times$ \\
 \end{tabular}
 \end{center}
 
-\begin{figure}[!h]
-\centering
-\outputpanel{cpu_default.png}{(a) CPU, README command}\hfill
-\outputpanel{cpu_matched.png}{(b) CPU, matched workload and call count}\par\smallskip
-\outputpanel{naive_cuda.png}{(c) Naive CUDA}\hfill
-\outputpanel{optimized_cuda.png}{(d) Optimized CUDA}
-\caption{Excerpts rendered from the saved Colab cell outputs. Each panel
-shows the command and the program's reported throughput.}
-\end{figure}
+Appendix~\ref{sec:run-records} gives the complete saved Colab output for all
+four commands.
 
 \newpage
 \section{Nsight Systems profiling}
@@ -143,5 +129,27 @@ The implementation and build instructions are in \texttt{matmul\_cuda.cu},
 \texttt{matmul\_cuda.h}, \texttt{run.patch}, and \texttt{Makefile}.
 \href{https://github.com/karpathy/llama2.c/tree/350e04fe35433e6d2941dce5a1f53308f87058eb}{Upstream source}\enspace
 \href{https://docs.nvidia.com/nsight-systems/AnalysisGuide/index.html}{Nsight Systems report guide}}
+
+\newpage
+\appendix
+\section{Original Colab run records}
+\label{sec:run-records}
+
+These are the complete standard output streams saved by the four benchmark
+cells in \texttt{hw2\_Q3.ipynb}. Long lines wrap to fit the page. The
+corresponding text files in \texttt{run\_records/} preserve the saved line
+breaks.
+
+\subsection*{CPU, README command (execution 47)}
+\lstinputlisting{run_records/cpu_default.txt}
+
+\subsection*{CPU, matched workload and matmul count (execution 48)}
+\lstinputlisting{run_records/cpu_matched.txt}
+
+\subsection*{Naive CUDA (execution 49)}
+\lstinputlisting{run_records/naive_cuda.txt}
+
+\subsection*{Optimized CUDA (execution 50)}
+\lstinputlisting{run_records/optimized_cuda.txt}
 
 \end{document}
