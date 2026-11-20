@@ -1,0 +1,7 @@
+B_10.vtk: values=98304 max_abs_err=0 max_rel_err=0 PASS
+E_10.vtk: values=98304 max_abs_err=0 max_rel_err=0 PASS
+rho_net_10.vtk: values=32768 max_abs_err=3e-08 max_rel_err=0.0240656143 PASS
+rhoe_10.vtk: values=32768 max_abs_err=1e-07 max_rel_err=9.72866746e-06 PASS
+rhoi_10.vtk: values=32768 max_abs_err=1e-13 max_rel_err=3.30586162e-06 PASS
+VTK files: 5; byte-identical: 2
+RESULT: PASS

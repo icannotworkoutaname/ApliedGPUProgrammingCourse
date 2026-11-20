@@ -1,0 +1,57 @@
+=== mover_PC (CPU) vs mover_PC_gpu (GPU) full comparison ===
+tolerances: atol=0.0001 rtol=0.001
+*************************************************
+**  Initialize GEM Challenge with Pertubation  **
+*************************************************
+** B0x = 0.0195
+** B0y = 0
+** B0z = 0
+** Delta (current sheet thickness) = 0.5
+** rho species 0 = 1 CURRENT SHEET 
+** rho species 1 = 1 CURRENT SHEET 
+** rho species 2 = 0.02 BACKGROUND 
+** rho species 3 = 0.02 BACKGROUND 
+*************************************************
+***  MOVER with SUBCYCLYING 1 - species 0 ***
+***  GPU MOVER with SUBCYCLYING 1 - species 0 ***
+--- species 0  (nop=4096000) ---
+  array x: max_abs_err=3.8147e-06  max_rel_err=5.45964e-07  (worst at i=6268)
+  array y: max_abs_err=1.90735e-06  max_rel_err=8.88462e-06  (worst at i=2912075)
+  array z: max_abs_err=5.96046e-08  max_rel_err=1.19208e-07  (worst at i=1806292)
+  array u: max_abs_err=2.98023e-08  max_rel_err=1.04111e-05  (worst at i=1991587)
+  array v: max_abs_err=2.98023e-08  max_rel_err=0.037037  (worst at i=195863)
+  array w: max_abs_err=5.96046e-08  max_rel_err=0.01  (worst at i=1324089)
+***  MOVER with SUBCYCLYING 1 - species 1 ***
+***  GPU MOVER with SUBCYCLYING 1 - species 1 ***
+--- species 1  (nop=4096000) ---
+  array x: max_abs_err=0  max_rel_err=0
+  array y: max_abs_err=9.53674e-07  max_rel_err=1.15112e-07  (worst at i=2083262)
+  array z: max_abs_err=5.96046e-08  max_rel_err=1.05056e-07  (worst at i=2304511)
+  array u: max_abs_err=3.72529e-09  max_rel_err=3.30641e-07  (worst at i=2103983)
+  array v: max_abs_err=7.45058e-09  max_rel_err=0.000561798  (worst at i=98676)
+  array w: max_abs_err=1.49012e-08  max_rel_err=8.74983e-06  (worst at i=2050134)
+***  MOVER with SUBCYCLYING 1 - species 2 ***
+***  GPU MOVER with SUBCYCLYING 1 - species 2 ***
+--- species 2  (nop=4096000) ---
+  array x: max_abs_err=3.8147e-06  max_rel_err=2.15131e-06  (worst at i=8640)
+  array y: max_abs_err=1.90735e-06  max_rel_err=1.73853e-05  (worst at i=3776051)
+  array z: max_abs_err=5.96046e-08  max_rel_err=1.19207e-07  (worst at i=597632)
+  array u: max_abs_err=2.98023e-08  max_rel_err=6.03296e-06  (worst at i=2007652)
+  array v: max_abs_err=5.96046e-08  max_rel_err=1  (worst at i=1924235)
+  array w: max_abs_err=5.96046e-08  max_rel_err=0.0555556  (worst at i=2020202)
+***  MOVER with SUBCYCLYING 1 - species 3 ***
+***  GPU MOVER with SUBCYCLYING 1 - species 3 ***
+--- species 3  (nop=4096000) ---
+  array x: max_abs_err=0  max_rel_err=0
+  array y: max_abs_err=2.38419e-07  max_rel_err=8.09503e-08  (worst at i=3408616)
+  array z: max_abs_err=5.96046e-08  max_rel_err=1.18644e-07  (worst at i=1428577)
+  array u: max_abs_err=3.72529e-09  max_rel_err=8.83694e-07  (worst at i=2151643)
+  array v: max_abs_err=7.45058e-09  max_rel_err=0.00067981  (worst at i=1902444)
+  array w: max_abs_err=7.45058e-09  max_rel_err=0.000604595  (worst at i=1324720)
+=== mover comparison summary ===
+worst max_abs_err = 3.8147e-06
+worst max_rel_err = 1
+CPU mover wall time (s) = 3.16862
+GPU mover wall time (s) = 0.490688  (incl. H2D/D2H transfers + allocation)
+GPU kernel-only time (s) = 0.0212108  (CUDA events, all species)
+RESULT: PASS

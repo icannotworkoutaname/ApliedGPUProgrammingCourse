@@ -1,0 +1,9 @@
+Mover backend: CPU (mover_PC)
+   Tot. Simulation Time (s) = 61.9111
+   Mover Time / Cycle   (s) = 3.35445
+   Interp. Time / Cycle (s) = 2.47386
+Mover backend: GPU (mover_PC_gpu)
+   Tot. Simulation Time (s) = 30.9489
+   Mover Time / Cycle   (s) = 0.249392
+   Mover Kernel / Cycle (s) = 0.0237013
+   Interp. Time / Cycle (s) = 2.47776

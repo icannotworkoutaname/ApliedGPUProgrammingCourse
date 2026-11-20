@@ -1,0 +1,12 @@
+type,M,K,N,kernel,tile_x,tile_y,threads_per_block,blocks_x,blocks_y,total_threads,active_threads,smem_per_block_B,time_ms,max_abs_error,max_rel_error,validation
+# case: M=1024 K=1024 N=1024 type=float | A=1024x1024 B=1024x1024 C=1024x1024
+# device: Tesla T4 (sm_75), cpu reference: 237.80 ms, kernel timing: 10 runs + warm-up, median CUDA-event ms
+float,1024,1024,1024,cpu,0,0,0,0,0,0,0,0,237.8020,0.000000e+00,0.000000e+00,full
+# gemm (naive 16x16): PASS  kernel=5.9330 ms  speedup=40.1x  max_rel=0.000e+00
+float,1024,1024,1024,gemm,0,0,256,64,64,1048576,1048576,0,5.9330,0.000000e+00,0.000000e+00,full
+# tiled  8x8  (smem=512 B): PASS  kernel=7.3646 ms  speedup=32.3x  max_rel=0.000e+00
+float,1024,1024,1024,tiled,8,8,64,128,128,1048576,1048576,512,7.3646,0.000000e+00,0.000000e+00,full
+# tiled 16x16 (smem=2048 B): PASS  kernel=3.9263 ms  speedup=60.6x  max_rel=0.000e+00
+float,1024,1024,1024,tiled,16,16,256,64,64,1048576,1048576,2048,3.9263,0.000000e+00,0.000000e+00,full
+# tiled 32x32 (smem=8192 B): PASS  kernel=3.8057 ms  speedup=62.5x  max_rel=0.000e+00
+float,1024,1024,1024,tiled,32,32,1024,32,32,1048576,1048576,8192,3.8057,0.000000e+00,0.000000e+00,full

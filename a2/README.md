@@ -15,6 +15,15 @@ Q1/                       1D convolution
     run_local.sh          builds, runs and profiles everything used in the report
     hw2_q1_colab.ipynb    the same steps as a Colab notebook (Tesla T4)
     results/              output of run_local.sh, including the report screenshots
+Q2/                       Tiled matrix multiplication
+    gemm_tiled.cu         CPU reference, naive gemm and runtime-sized tiled GEMM
+    benchmark.py          ten-shape timing sweep and grouped bar chart
+    results/              Colab output, Nsight Compute reports and screenshots
+Bonus/                    GPU particle mover
+    iPIC3D-mini/          pinned upstream miniPIC source with CPU/GPU movers
+    run_compare.sh        full GEM_2D CPU/GPU output and timing comparison
+    compare_vtk.py        element-wise ASCII VTK validation with NaN/Inf rejection
+    results/              correctness, simulation output and screenshots
 Q3/                       Llama2 inference on the GPU
     Makefile              downloads llama2.c run.c, applies run.patch, builds the CPU and CUDA versions
     run.patch             changes to run.c: matmul counter and calls to the CUDA matmul
@@ -92,6 +101,46 @@ To use Colab instead, open `Q1/hw2_q1_colab.ipynb`, choose a T4 GPU runtime and 
 
 ---
 
+## Question 2: Tiled Matrix Multiplication
+
+### What the code does
+
+`Q2/gemm_tiled.cu` computes row-major `C(MxN) = A(MxK) * B(KxN)`. It runs the
+single-threaded CPU reference once, then naive `gemm()` and `tiled_gemm()` with
+8x8, 16x16 and 32x32 tiles. The tiled kernel uses runtime `tileX`/`tileY` and
+dynamic shared memory; out-of-range tile elements are zero-filled. Every output
+element from every CUDA kernel is compared with the full CPU reference.
+
+Each CUDA kernel has one warm-up launch followed by 10 measured launches. The
+reported kernel time is the median CUDA-event duration. Set `GEMM_REPS=1` for a
+single launch without warm-up when profiling.
+
+### Environment
+
+Google Colab, Tesla T4 (compute capability 7.5), CUDA 13.0.88 and Nsight
+Compute. Final measurements were executed through the Colab CLI session `a2`;
+raw outputs and output figures are saved under `Q2/results/`.
+
+### How to reproduce
+
+```bash
+cd Q2
+make ARCH=sm_75
+./gemm_tiled 1024 1024 1024 float
+./gemm_tiled 513 8192 1023 float
+python3 benchmark.py ./gemm_tiled --type float --outdir results
+
+GEMM_REPS=1 ncu --section Occupancy --section MemoryWorkloadAnalysis \
+  ./gemm_tiled 1024 1024 1024 float > results/ncu_1024.txt 2>&1
+GEMM_REPS=1 ncu --section Occupancy --section MemoryWorkloadAnalysis \
+  ./gemm_tiled 513 8192 1023 float > results/ncu_513x8192x1023.txt 2>&1
+```
+
+The benchmark writes long and wide CSV tables plus `timing_float.png`, a grouped
+bar chart of the CPU, naive and three tiled implementations over ten shapes.
+
+---
+
 ## Question 3: Accelerate Llama2 Inference
 
 ### What the code does
@@ -142,3 +191,33 @@ nsys stats --report cuda_api_sum,cuda_gpu_kern_sum,cuda_gpu_mem_time_sum,cuda_gp
 ```
 
 The optimized version is profiled the same way with `./run_optimized`.
+
+---
+
+## Bonus: GPU Particle Mover
+
+`Bonus/iPIC3D-mini` is based on KTH-ScaLab/DD2360-HT25 at commit
+`53e7ca59d1904f586b2940d2cfc3f30351873e7b`. The original CPU `mover_PC()` is
+kept alongside `mover_PC_gpu()`. The GPU wrapper copies the particle arrays and
+contiguous field/grid arrays to the device; one CUDA thread moves one particle.
+Separate object directories and binaries prevent CPU/GPU build contamination.
+
+Both versions use the unmodified `GEM_2D.inp`. Build and run on a CUDA machine:
+
+```bash
+cd Bonus/iPIC3D-mini
+make -j2 cpu
+make -j2 gpu compare ARCH=sm_75
+
+# Compare every x/y/z/u/v/w element for every species after one mover call.
+./bin/mover_compare.out inputfiles/GEM_2D.inp
+
+# Run the complete ten-cycle CPU and GPU simulations and compare their VTK output.
+cd ..
+./run_compare.sh
+```
+
+The full-simulation script writes separate `run_cpu/` and `run_gpu/` directories.
+Report artifacts, console logs, numerical output comparison and Colab screenshots
+are collected in `Bonus/results/`. The GPU program reports both end-to-end mover
+time (allocation, transfers and kernel) and kernel-only CUDA-event time.

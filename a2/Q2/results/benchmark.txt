@@ -1,0 +1,13 @@
+float 128x256x32: cpu=0.60 ms, gemm=0.020 ms, tiled16=0.022 ms
+float 256x256x256: cpu=6.98 ms, gemm=0.066 ms, tiled16=0.066 ms
+float 384x384x384: cpu=10.56 ms, gemm=0.195 ms, tiled16=0.188 ms
+float 512x512x512: cpu=25.74 ms, gemm=0.437 ms, tiled16=0.414 ms
+float 768x768x768: cpu=111.88 ms, gemm=1.462 ms, tiled16=1.579 ms
+float 1024x1024x1024: cpu=206.42 ms, gemm=3.678 ms, tiled16=4.055 ms
+float 1280x1280x1280: cpu=425.67 ms, gemm=9.957 ms, tiled16=9.136 ms
+float 1536x1536x1536: cpu=699.89 ms, gemm=16.938 ms, tiled16=16.372 ms
+float 513x8192x1023: cpu=1752.78 ms, gemm=33.335 ms, tiled16=19.274 ms
+float 2048x2048x2048: cpu=1819.54 ms, gemm=40.089 ms, tiled16=38.868 ms
+wrote results/timing_float.csv
+wrote results/timing_float_wide.csv
+wrote results/timing_float.png

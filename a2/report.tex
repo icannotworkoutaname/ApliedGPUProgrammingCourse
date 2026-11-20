@@ -96,7 +96,8 @@ and Llama~2 Inference on the GPU}
 \textbf{Question} & \textbf{GPU and system} & \textbf{CUDA and profilers} & \textbf{Purpose} \\
 \midrule
 Q1 & RTX 3060 Laptop GPU (CC 8.6, 30 SMs), Windows 11 + WSL2 Ubuntu 24.04, driver 566.36 & CUDA 12.6.85, Nsight Systems 2026.6.1, Nsight Compute 2024.3.2 & Timing, correctness and profiling \\
-% Q2 & ... & ... & ... \\
+Q2 & Tesla T4, Google Colab & CUDA 13.0.88, Nsight Compute & Correctness, timing and occupancy \\
+Bonus & Tesla T4, Google Colab & CUDA 13.0.88 & CPU/GPU mover correctness and timing \\
 Q3 & Tesla T4, Google Colab & CUDA 13.0.88, Nsight Systems 2025.3.1 & Throughput, correctness and profiling \\
 \bottomrule
 \end{tabularx}
@@ -221,10 +222,114 @@ For 25\%, 50\% and 100\% the driver picks 102.4\,KB. Duration and occupancy stay
 
 % =====================================================================
 \clearpage
-\section*{Question 2 --- Tiled Matrix Multiplication}
-\tocentry{Question 2 --- Tiled Matrix Multiplication}
+\section*{Question 2: Tiled matrix multiplication}
+\tocentry{Question 2: Tiled matrix multiplication}
 
-% TODO (Q2)
+\texttt{Q2/gemm\_tiled.cu} extends the Assignment 1 GEMM with
+\texttt{tiled\_gemm()}. The naive kernel assigns one output element to each
+thread. A tiled block computes a \texttt{tileY}-by-\texttt{tileX} output tile
+and stages A and B in dynamic shared memory, using reduction chunks of
+\texttt{tileX}. Out-of-range elements are zero, which handles partial tiles
+without a separate reduction tail. The program validates every output element
+against a full CPU reference. Each GPU time is the median of 10 CUDA-event
+measurements after one warm-up launch, excluding copies. All runs use float on
+the Colab Tesla T4.
+
+\subsection*{1. Global-memory reads}
+For A of size \(M\times K\) and B of size \(K\times N\), each of the \(MN\)
+outputs reads \(K\) elements from each input in the naive kernel:
+\[
+R_\text{naive}=2MNK.
+\]
+A tiled row block loads its A slab once for each of \(\lceil N/t_x\rceil\)
+column blocks. B is loaded once for each of \(\lceil M/t_y\rceil\) row blocks:
+\[
+R_\text{tiled}=MK\left\lceil\frac{N}{t_x}\right\rceil
+              +KN\left\lceil\frac{M}{t_y}\right\rceil
+ \approx MNK\left(\frac1{t_x}+\frac1{t_y}\right).
+\]
+Both kernels write C once. For \(1024^3\), the naive kernel performs
+2,147,483,648 operand reads. Square tiles of width 8, 16 and 32 reduce this
+count to 268,435,456, 134,217,728 and 67,108,864. These counts describe loads
+in the source. Repeated naive loads may hit in the cache, so the counts do not
+represent DRAM transactions.
+
+\subsection*{2. Square \(1024\times1024\) matrices}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Q2/results/screenshots/q2_1024_output.png}
+\caption{Output for the square case. Every kernel passes full validation.}
+\label{fig:q2-square}
+\end{figure}
+
+The 16 tile takes 3.9263\,ms, 1.51 times as fast as naive GEMM
+(5.9330\,ms). Increasing the tile to 32 reduces the time to 3.8057\,ms, a
+\(1.56\times\) speed-up. The 8 tile is slower than naive at 7.3646\,ms because its
+smaller reduction in global loads, larger grid and synchronization overhead
+outweigh the tiling benefit. The CPU reference takes 237.80\,ms.
+
+\subsection*{3. Non-divisible \(513\times8192\times1023\) case}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Q2/results/screenshots/q2_513x8192x1023_output.png}
+\caption{Output for A \(513\times8192\) and B \(8192\times1023\). All output
+elements pass full validation.}
+\label{fig:q2-ragged}
+\end{figure}
+
+Here \(K=8192\) is divisible by all three tile sizes; \(M=513\) and \(N=1023\)
+produce the partial boundary tiles. Zero-filled shared-memory padding gives the
+same result as the CPU reference. The 32 tile is fastest at 15.9728\,ms, 1.29
+times as fast as naive GEMM (20.5902\,ms). The 16 tile takes 19.1043\,ms, while
+the 8 tile is slowest at 30.0208\,ms. The single-threaded CPU time is 1093.68\,ms.
+
+\subsection*{4. Occupancy and shared memory}
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Kernel & Dynamic shared memory & \multicolumn{2}{c}{Achieved occupancy (\%)} \\
+\cmidrule(lr){3-4}
+ & per block (B) & \(1024^3\) & \(513\times8192\times1023\) \\
+\midrule
+Naive \texttt{gemm} & 0 & 98.91 & 96.93 \\
+Tiled \(8\times8\) & 512 & 98.69 & 97.56 \\
+Tiled \(16\times16\) & 2,048 & 98.69 & 97.70 \\
+Tiled \(32\times32\) & 8,192 & 99.96 & 99.99 \\
+\bottomrule
+\end{tabular}
+\caption{Nsight Compute occupancy and shared-memory usage. Theoretical occupancy
+is 100\% for every row.}
+\label{tab:q2-occupancy}
+\end{table}
+
+None of these tests is limited by shared-memory capacity. The 32 tile has 1,024
+threads and one resident block per SM, but that block contains all 32 warps and
+achieved occupancy remains high. Low occupancy therefore cannot explain the 8
+tile's time. Nsight Compute reports an 87.44\% L1 hit rate for naive GEMM in the
+square case, compared with 25.68\%, 5.86\% and 0\% for the 8, 16 and 32 tiles.
+Caching helps the naive kernel, which is why fewer load instructions do not
+produce a proportional speed-up.
+
+\subsection*{5. Increasing-size benchmark}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Q2/results/timing_float.png}
+\caption{Ten-shape benchmark, ordered by total multiply-accumulate work. The
+logarithmic axis compares the CPU, naive and three tiled kernels.}
+\label{fig:q2-sweep}
+\end{figure}
+
+The naive kernel performs well on small and medium matrices. It is fastest for
+\(128\times256\times32\), \(768^3\) and the sweep's \(1024^3\) run. Tiling adds
+barriers, shared-memory stores and address calculations, while the naive kernel
+benefits from its high cache hit rate. The 8 tile is never fastest. From
+\(1280^3\) upward the 32 tile is fastest; at \(2048^3\) it takes 29.5035\,ms,
+compared with 40.0891\,ms for naive and 1819.54\,ms on the CPU. Occupancy stays
+high across these kernels. The unexpected behavior comes from the naive
+kernel's cache use and the extra work performed by small tiles. Raw timings are
+in \texttt{Q2/results/timing\_float.csv}, and the two \texttt{ncu\_*.txt} files
+contain the profiling output.
 
 % =====================================================================
 \clearpage
@@ -323,8 +428,87 @@ Device-to-host total (ms) & 18.87 & 15.42 \\
 
 % =====================================================================
 % Optional bonus
-% \clearpage
-% \section*{Bonus --- A Particle Simulation Application}
-% \tocentry{Bonus --- A Particle Simulation Application}
+\clearpage
+\section*{Bonus --- A Particle Simulation Application}
+\tocentry{Bonus --- A Particle Simulation Application}
+
+\subsection*{1. Environment, build and execution}
+The code is based on KTH-ScaLab/DD2360-HT25 at commit
+\texttt{53e7ca59d190}. We used Google Colab with
+a Tesla T4, driver 580.82.07 and CUDA 13.0.88. The revised Makefile builds
+\texttt{miniPIC\_cpu.out}, \texttt{miniPIC\_gpu.out} and
+\texttt{mover\_compare.out} with separate object directories. This prevents
+CPU and GPU objects from contaminating each other. \texttt{ARCH=sm\_75} selects
+the T4 architecture; the CPU target needs only \texttt{g++}.
+
+We ran the unmodified \texttt{GEM\_2D.inp} for all ten cycles:
+\begin{verbatim}
+make -j2 cpu
+make -j2 gpu compare ARCH=sm_75
+./bin/mover_compare.out inputfiles/GEM_2D.inp
+cd .. && ./run_compare.sh
+\end{verbatim}
+The last command runs both complete simulations and compares their VTK output.
+
+\subsection*{2. GPU mover design}
+The original CPU \texttt{mover\_PC()} is retained. The new
+\texttt{mover\_PC\_gpu()} allocates device buffers on each call, uploads six
+particle arrays, six field arrays and three grid-coordinate arrays, launches
+one thread per particle, and copies the six updated particle arrays back. Each
+thread executes its particle's subcycles and predictor--corrector iterations
+sequentially. It performs the same trilinear interpolation, velocity solve and
+periodic/reflecting boundary updates as the CPU version.
+
+The upstream contiguous flat arrays are copied directly. Device addressing follows
+\(n_{yn}n_{zn}i_x+n_{zn}i_y+i_z\), so no host pointer chain is copied. Grid
+constants are passed by value. CUDA calls and launch errors are
+checked, and RAII wrappers release buffers and events on error paths. CUDA
+events measure kernel time separately from end-to-end mover time.
+
+\subsection*{3. CPU/GPU correctness}
+The standalone checker starts from one \texttt{initGEM} state and compares every
+\(x,y,z,u,v,w\) value for all four species. This covers 16,384,000 particles
+and 98,304,000 values. All values passed
+\(|g-c|\leq10^{-4}+10^{-3}|c|\). The worst absolute error was
+\(3.8147\times10^{-6}\). A worst relative error of 1 occurs only for a near-zero
+velocity whose absolute error is \(5.96046\times10^{-8}\).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{Bonus/results/screenshots/bonus_mover_compare.png}
+\caption{Full CPU/GPU mover comparison on the Tesla T4.}
+\label{fig:bonus-mover}
+\end{figure}
+
+Both complete simulations also finished ten cycles. E and B at cycle 10 were
+byte-identical. Every value in the three density files passed the numerical
+comparison; the maximum absolute errors were \(10^{-7}\) for electron density,
+\(10^{-13}\) for ion density and \(3\times10^{-8}\) for net density. Thus all
+five VTK files passed. The checker also rejects NaN and infinity rather than
+allowing them to compare as equal. Raw logs and numerical comparisons are in
+\texttt{Bonus/results/}.
+
+\subsection*{4. Execution time}
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Complete GEM\_2D run & CPU (s) & GPU (s) \\
+\midrule
+Total simulation & 61.9111 & 30.9489 \\
+Mover per cycle, end-to-end & 3.35445 & 0.249392 \\
+Mover kernel per cycle & --- & 0.0237013 \\
+Interpolation per cycle & 2.47386 & 2.47776 \\
+\bottomrule
+\end{tabular}
+\caption{CPU/GPU timing for the complete ten-cycle simulation.}
+\label{tab:bonus-timing}
+\end{table}
+
+The end-to-end mover speed-up is \textbf{13.45x}, including allocation and all
+transfers. Allocation, transfers and launch overhead account for 0.22569\,s,
+90.5\% of the GPU mover time. The whole simulation is \textbf{2.00x} as fast;
+its remaining hotspot is CPU interpolation, which takes about 2.48\,s per cycle
+in both runs.
 
 \end{document}

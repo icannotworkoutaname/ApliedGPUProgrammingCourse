@@ -1,0 +1,135 @@
+==PROF== Connected to process 1169 (/content/Q2/gemm_tiled)
+==PROF== Profiling "gemm" - 0: 0%....50%....100% - 9 passes
+==PROF== Profiling "tiled_gemm" - 1: 0%....50%....100% - 9 passes
+==PROF== Profiling "tiled_gemm" - 2: 0%....50%....100% - 9 passes
+==PROF== Profiling "tiled_gemm" - 3: 0%....50%....100% - 9 passes
+type,M,K,N,kernel,tile_x,tile_y,threads_per_block,blocks_x,blocks_y,total_threads,active_threads,smem_per_block_B,time_ms,max_abs_error,max_rel_error,validation
+# case: M=513 K=8192 N=1023 type=float | A=513x8192 B=8192x1023 C=513x1023
+# device: Tesla T4 (sm_75), cpu reference: 1828.91 ms, kernel timing: 1 run (no warm-up), median CUDA-event ms
+float,513,8192,1023,cpu,0,0,0,0,0,0,0,0,1828.9075,0.000000e+00,0.000000e+00,full
+# gemm (naive 16x16): PASS  kernel=3417.7380 ms  speedup=0.5x  max_rel=0.000e+00
+float,513,8192,1023,gemm,0,0,256,64,33,540672,524799,0,3417.7380,0.000000e+00,0.000000e+00,full
+# tiled  8x8  (smem=512 B): PASS  kernel=4331.7524 ms  speedup=0.4x  max_rel=0.000e+00
+float,513,8192,1023,tiled,8,8,64,128,65,532480,524799,512,4331.7524,0.000000e+00,0.000000e+00,full
+# tiled 16x16 (smem=2048 B): PASS  kernel=3246.3982 ms  speedup=0.6x  max_rel=0.000e+00
+float,513,8192,1023,tiled,16,16,256,64,33,540672,524799,2048,3246.3982,0.000000e+00,0.000000e+00,full
+# tiled 32x32 (smem=8192 B): PASS  kernel=2750.8247 ms  speedup=0.7x  max_rel=0.000e+00
+float,513,8192,1023,tiled,32,32,1024,32,17,557056,524799,8192,2750.8247,0.000000e+00,0.000000e+00,full
+==PROF== Disconnected from process 1169
+[1169] gemm_tiled@127.0.0.1
+  void gemm<float>(const T1 *, const T1 *, T1 *, unsigned long, unsigned long, unsigned long) (64, 33, 1)x(16, 16, 1), Context 1, Stream 7, Device 0, CC 7.5
+    Section: Memory Workload Analysis
+    -------------------------------------- ----------- ------------
+    Metric Name                            Metric Unit Metric Value
+    -------------------------------------- ----------- ------------
+    Local Memory Spilling Requests                                0
+    Local Memory Spilling Request Overhead           %      no data
+    Memory Throughput                          Gbyte/s        61.84
+    Mem Busy                                         %        46.07
+    Max Bandwidth                                    %        59.95
+    L1/TEX Hit Rate                                  %        86.82
+    L2 Hit Rate                                      %        64.31
+    Mem Pipes Busy                                   %        59.95
+    -------------------------------------- ----------- ------------
+
+    Section: Occupancy
+    ------------------------------- ----------- ------------
+    Metric Name                     Metric Unit Metric Value
+    ------------------------------- ----------- ------------
+    Block Limit SM                        block           16
+    Block Limit Registers                 block            8
+    Block Limit Shared Mem                block           16
+    Block Limit Warps                     block            4
+    Theoretical Active Warps per SM        warp           32
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        96.93
+    Achieved Active Warps Per SM           warp        31.02
+    ------------------------------- ----------- ------------
+
+  void tiled_gemm<float>(const T1 *, const T1 *, T1 *, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long) (128, 65, 1)x(8, 8, 1), Context 1, Stream 7, Device 0, CC 7.5
+    Section: Memory Workload Analysis
+    -------------------------------------- ----------- ------------
+    Metric Name                            Metric Unit Metric Value
+    -------------------------------------- ----------- ------------
+    Local Memory Spilling Requests                                0
+    Local Memory Spilling Request Overhead           %      no data
+    Memory Throughput                          Gbyte/s        96.15
+    Mem Busy                                         %        44.42
+    Max Bandwidth                                    %        60.89
+    L1/TEX Hit Rate                                  %        22.28
+    L2 Hit Rate                                      %        69.06
+    Mem Pipes Busy                                   %        60.89
+    -------------------------------------- ----------- ------------
+
+    Section: Occupancy
+    ------------------------------- ----------- ------------
+    Metric Name                     Metric Unit Metric Value
+    ------------------------------- ----------- ------------
+    Block Limit SM                        block           16
+    Block Limit Registers                 block           18
+    Block Limit Shared Mem                block           64
+    Block Limit Warps                     block           16
+    Theoretical Active Warps per SM        warp           32
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        97.56
+    Achieved Active Warps Per SM           warp        31.22
+    ------------------------------- ----------- ------------
+
+  void tiled_gemm<float>(const T1 *, const T1 *, T1 *, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long) (64, 33, 1)x(16, 16, 1), Context 1, Stream 7, Device 0, CC 7.5
+    Section: Memory Workload Analysis
+    -------------------------------------- ----------- ------------
+    Metric Name                            Metric Unit Metric Value
+    -------------------------------------- ----------- ------------
+    Local Memory Spilling Requests                                0
+    Local Memory Spilling Request Overhead           %      no data
+    Memory Throughput                          Gbyte/s        55.48
+    Mem Busy                                         %        39.49
+    Max Bandwidth                                    %        73.28
+    L1/TEX Hit Rate                                  %         0.17
+    L2 Hit Rate                                      %        65.69
+    Mem Pipes Busy                                   %        73.28
+    -------------------------------------- ----------- ------------
+
+    Section: Occupancy
+    ------------------------------- ----------- ------------
+    Metric Name                     Metric Unit Metric Value
+    ------------------------------- ----------- ------------
+    Block Limit SM                        block           16
+    Block Limit Registers                 block            4
+    Block Limit Shared Mem                block           16
+    Block Limit Warps                     block            4
+    Theoretical Active Warps per SM        warp           32
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        97.70
+    Achieved Active Warps Per SM           warp        31.26
+    ------------------------------- ----------- ------------
+
+  void tiled_gemm<float>(const T1 *, const T1 *, T1 *, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long) (32, 17, 1)x(32, 32, 1), Context 1, Stream 7, Device 0, CC 7.5
+    Section: Memory Workload Analysis
+    -------------------------------------- ----------- ------------
+    Metric Name                            Metric Unit Metric Value
+    -------------------------------------- ----------- ------------
+    Local Memory Spilling Requests                                0
+    Local Memory Spilling Request Overhead           %      no data
+    Memory Throughput                          Gbyte/s        18.11
+    Mem Busy                                         %        35.36
+    Max Bandwidth                                    %        70.47
+    L1/TEX Hit Rate                                  %            0
+    L2 Hit Rate                                      %        65.16
+    Mem Pipes Busy                                   %        70.47
+    -------------------------------------- ----------- ------------
+
+    Section: Occupancy
+    ------------------------------- ----------- ------------
+    Metric Name                     Metric Unit Metric Value
+    ------------------------------- ----------- ------------
+    Block Limit SM                        block           16
+    Block Limit Registers                 block            1
+    Block Limit Shared Mem                block            4
+    Block Limit Warps                     block            1
+    Theoretical Active Warps per SM        warp           32
+    Theoretical Occupancy                     %          100
+    Achieved Occupancy                        %        99.99
+    Achieved Active Warps Per SM           warp        32.00
+    ------------------------------- ----------- ------------
+
