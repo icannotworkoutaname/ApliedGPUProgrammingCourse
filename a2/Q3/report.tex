@@ -22,33 +22,32 @@
 
 \section{Setup and implementation}
 
-The experiment ran in Google Colab on an NVIDIA Tesla T4 with CUDA Toolkit
-13.0.88 and Nsight Systems 2025.3.1. The baseline used Karpathy's FP32
-\texttt{run.c} compiled with \texttt{gcc -O3} and the \texttt{stories15M.bin}
-checkpoint. The matched benchmarks used greedy decoding (\texttt{-t 0}),
-seed 42, an empty prompt, and a limit of 256 forward passes.
+The runs used a Tesla T4 in Google Colab, with CUDA 13.0.88 and Nsight
+Systems 2025.3.1. For the CPU baseline, we compiled Karpathy's FP32
+\texttt{run.c} with \texttt{gcc -O3} and ran \texttt{./run stories15M.bin}.
+For the comparison, all three versions used an empty prompt and the same
+flags, \texttt{-t 0 -s 42 -n 256}.
 
-Each call to \texttt{matmul} multiplies a $d\times n$ weight matrix by a
-length-$n$ input vector. One CUDA thread computes one output row, with
-128 threads per block. The naive port allocates three device buffers,
-copies the weights and input to the GPU, and copies the output back before
-freeing the buffers. The optimized port uploads the checkpoint once,
-locates each matrix by its offset in that copy, and reuses the input and
-output buffers. Both ports use the same kernel.
+In the CUDA kernel, one thread computes the dot product of one weight row
+and the input vector. Each block has 128 threads. The naive version
+allocates three buffers and copies the input and weights to the GPU
+on each call. After the kernel it copies the result back and frees
+the buffers. The optimized version
+uploads the checkpoint once and finds each weight matrix by its offset.
+It uses the same kernel and reuses the input and output buffers.
 
 \section{Correctness and throughput}
 
-The three matched runs produced identical text. With \texttt{CHECK\_MATMUL=1},
-both CUDA builds also passed an element-by-element CPU comparison for every
-matmul in runs capped at eight steps. For a CPU result $y$, the allowed absolute
-error was $10^{-5}+10^{-5}|y|$. CUDA compilation used \texttt{--fmad=false}
-to keep multiplication and addition separate.
+The three runs generated identical text with the same flags. We also ran
+both CUDA versions with \texttt{CHECK\_MATMUL=1} for up to eight steps.
+This checked each output element against the CPU result $y$, with a
+tolerance of $10^{-5}+10^{-5}|y|$. Both passed. We used
+\texttt{--fmad=false} to keep multiplication and addition separate.
 
-The instrumented CPU run counted \textbf{9,546 matmul calls} in the matched
-workload. Each forward pass has seven projections in each of six layers
-and one vocabulary projection, for $7\times6+1=43$ calls. The count
-corresponds to 222 forward passes, with generation ending before the
-256-step limit.
+The CPU run with the counter made \textbf{9,546 matmul calls}. Each
+forward pass does seven matmuls per layer across six layers and one for
+the vocabulary output, giving $7\times6+1=43$. The run stopped after
+222 forward passes.
 
 \begin{center}
 \begin{tabular}{@{}lrr@{}}
@@ -69,11 +68,10 @@ for the CPU README run and both CUDA runs.
 \newpage
 \section{Nsight Systems profiling}
 
-We profiled the naive and optimized versions with the matched workload.
-The traces cover initialization and generation. The inference program's
-throughput timer starts after the first forward pass, so the throughput
-in the previous section uses the unprofiled runs and excludes the
-optimized version's one-time checkpoint upload.
+We profiled both CUDA versions with the same input and flags. The
+profiles include the checkpoint upload during setup. The throughput
+values above come from separate runs, and their timer starts after the
+first forward pass.
 
 \begin{center}
 \begin{tabular}{@{}lrr@{}}
@@ -103,28 +101,25 @@ Device-to-host total (ms) & 18.87 & 15.42 \\
 
 \subsection*{Naive bottleneck}
 
-\texttt{cudaMemcpy} accounted for 66.7\% of the recorded CUDA API time.
-Allocation and release accounted for another 31.1\%. On the device,
-host-to-device transfers took 2,306.40\,ms, compared with 492.22\,ms
-for the matmul kernel. Each call uploaded its weight matrix again.
-CUDA API times include host waiting during blocking operations and are
-reported separately from GPU activity times.
+The largest cost was copying the weights to the GPU on every call.
+Host-to-device copies took 2,306.40\,ms on the GPU, and the kernel took
+492.22\,ms. In the CUDA API summary, \texttt{cudaMemcpy} accounted for
+66.7\% of the recorded time. Allocation and release took another 31.1\%.
 
-\subsection*{Effect of persistent device buffers}
+\subsection*{After keeping weights on the GPU}
 
-The optimized build issued 9,546 input uploads and one checkpoint
-upload. Host-to-device volume fell by about $182\times$, and time in these
-transfers fell by about $113\times$. The number of allocations and frees dropped
-from three of each per matmul to three of each for the entire run.
-Both versions launched 9,546 kernels and returned the same amount of
-output data to the CPU. Total kernel time rose from 492.22 to 523.64\,ms
-in the two captures. The optimized run reached \textbf{$8.18\times$ the
-naive CUDA throughput} and \textbf{$6.18\times$ the matched CPU throughput}.
+The optimized version uploaded the checkpoint once and copied 9,546
+input vectors. That brought host-to-device traffic down to 74.370\,MB
+and copy time down to 20.46\,ms. It made three allocations at startup
+and freed the buffers at shutdown. The kernel count and the amount
+copied back to the CPU stayed the same. Total kernel time went from
+492.22 to 523.64\,ms. The optimized version ran
+\textbf{$8.18\times$ as fast as naive CUDA} and
+\textbf{$6.18\times$ as fast as the matched CPU run}.
 
 \medskip
-{\small Measurements come from the saved outputs in \texttt{hw2\_Q3.ipynb}.
-The implementation and build instructions are in \texttt{matmul\_cuda.cu},
-\texttt{matmul\_cuda.h}, \texttt{run.patch}, and \texttt{Makefile}.
+{\small The results are saved in \texttt{hw2\_Q3.ipynb}. The source ZIP
+contains the modified \texttt{run.c}, CUDA source and \texttt{Makefile}.
 \href{https://github.com/karpathy/llama2.c/tree/350e04fe35433e6d2941dce5a1f53308f87058eb}{Upstream source}\enspace
 \href{https://docs.nvidia.com/nsight-systems/AnalysisGuide/index.html}{Nsight Systems report guide}}
 
@@ -132,9 +127,6 @@ The implementation and build instructions are in \texttt{matmul\_cuda.cu},
 \appendix
 \section{Original benchmark screenshots}
 \label{sec:run-screenshots}
-
-The screenshots show the executed cells and their \texttt{achieved tok/s}
-output in \texttt{hw2\_Q3.ipynb}.
 
 \begin{figure}[H]
   \centering
