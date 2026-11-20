@@ -1,17 +1,29 @@
-# HW2 Question 1 - 1D Convolution
+# HW2 - Assignment Group 40
 
-## Files
+Members: Yuanyu Zhang, Hongen Wang, Xinyang Li
+
+Code and steps to reproduce the answers of HW2. `report.tex` is the source of the report (`HW2_Group40.pdf`).
+
+## Layout
 
 ```
-conv1d.cu             the course skeleton (hw2-convolution.cu), completed
-run_local.sh          builds, runs and profiles everything used in the report
-hw2_q1_colab.ipynb    the same steps as a Colab notebook (Tesla T4)
-results/              output of run_local.sh
+README.md                 this file
+report.tex                report source
+kth-logo.png              cover logo
+Q1/                       1D convolution
+    conv1d.cu             the course skeleton (hw2-convolution.cu), completed
+    run_local.sh          builds, runs and profiles everything used in the report
+    hw2_q1_colab.ipynb    the same steps as a Colab notebook (Tesla T4)
+    results/              output of run_local.sh, including the report screenshots
 ```
 
-## What the code does
+---
 
-`conv1d.cu` keeps the structure of the skeleton. The mask width is 5, the mask is
+## Question 1: 1D Convolution
+
+### What the code does
+
+`Q1/conv1d.cu` keeps the structure of the skeleton. The mask width is 5, the mask is
 `[-0.25, 0.5, 1.0, 0.5, 0.25]` and the input is random. Inputs outside the array count as 0.
 We added a `width` argument to both kernels, since the skeleton signatures have no length parameter.
 
@@ -26,9 +38,9 @@ and prints the average time from CUDA events.
 `TILE_WIDTH` is set at compile time (default 128). The optional second argument sets the shared memory
 carveout of the tiled kernel in percent.
 
-## Environment
+### Environment
 
-We ran everything on an RTX 3060 Laptop GPU (compute capability 8.6) under WSL2 Ubuntu 24.04 on
+We ran Q1 on an RTX 3060 Laptop GPU (compute capability 8.6) under WSL2 Ubuntu 24.04 on
 Windows 11, driver 566.36, with CUDA 12.6.85, Nsight Compute 2024.3.2 and Nsight Systems 2026.6.1.
 
 Two things were needed on this setup:
@@ -40,13 +52,13 @@ Two things were needed on this setup:
    We used the Linux command line tool of Nsight Systems 2026.6.1 instead. It is the `target-linux-x64`
    folder of the Windows installation, copied to `~/nsys2026/target-linux-x64` in WSL.
 
-## How to reproduce
+### How to reproduce
 
 ```bash
-bash run_local.sh
+bash Q1/run_local.sh
 ```
 
-This writes to `results/`:
+This writes to `Q1/results/`:
 
 - `run_<N>.txt`: program output for N = 1024 to 16384 with TILE_WIDTH = 128 (Figure 1 of the report)
 - `sweep_nsys.txt`: kernel time for every N and tile size, measured with Nsight Systems (Table 1)
@@ -56,14 +68,15 @@ This writes to `results/`:
 - `sweep.txt`: the same sweep timed with CUDA events. These numbers are noisy under WSL2 and were not used.
 
 Paths and the GPU architecture can be changed with environment variables, for example
-`ARCH=sm_75 CUDA_BIN=/usr/local/cuda/bin NSYS=/path/to/nsys bash run_local.sh`.
+`ARCH=sm_75 CUDA_BIN=/usr/local/cuda/bin NSYS=/path/to/nsys bash Q1/run_local.sh`.
 
 A single run by hand:
 
 ```bash
+cd Q1
 nvcc -O3 -arch=sm_86 -lineinfo -DTILE_WIDTH=128 conv1d.cu -o conv1d_T128
 ./conv1d_T128 16384        # N = 16384
 ./conv1d_T128 16384 0      # N = 16384, carveout 0 %
 ```
 
-To use Colab instead, open `hw2_q1_colab.ipynb`, choose a T4 GPU runtime and run the cells from the top.
+To use Colab instead, open `Q1/hw2_q1_colab.ipynb`, choose a T4 GPU runtime and run the cells from the top.
